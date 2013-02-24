@@ -89,6 +89,7 @@
     <Compile Include="Genome\Searcher.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SAIS\String.cs" />
     <Compile Include="Trie\TrieAligner.cs" />
     <Compile Include="Trie\TrieNode.cs" />
   </ItemGroup>

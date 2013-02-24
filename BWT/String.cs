@@ -28,7 +28,7 @@ namespace CS124Project.BWT
 
             long lastValue = long.MaxValue;
             var lmsCharacterIndices = new List<uint>();
-            for (uint i = _length - 1; i != long.MaxValue; i--)
+            for (uint i = _length - 1; i != long.MaxValue; i--) // TODO should probably stop at 0
             {
                 long value = GetCharacterValue(i);
                 if (value < lastValue || (value == lastValue && GetCharacterType(i+1) == Type.S))

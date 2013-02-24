@@ -20,14 +20,9 @@ namespace CS124Project.Genome
             _statisticFormula = chart.DataManipulator.Statistics;
         }
 
-        public void GenerateReads(string genomePath, string readsPath, double meanReadsPerSnp, int maxReadsPerSnp, double standardDeviation)
+        public void GenerateReads(string genomePath, string readsPath, double coverage)
         {
-            // Create probability cutoffs for number of reads at any SNP
-            double[] pvalues = new double[maxReadsPerSnp];
-            for (int i = 0; i < pvalues.Count(); i++)
-                pvalues[i] = _statisticFormula.NormalDistribution(zValue: (1 - meanReadsPerSnp) + (double) i*standardDeviation);
-
-            byte[] readSequence = new byte[9];  // reads are only 60 bits, but can get 4 at a time by reading in an extra byte
+            byte[] readSequence = new byte[9];  // reads are only 60 bits, but can get 4 at a time by reading in an extra byte. Reads are bit arrays [0..60], [2..62], [4..64], [6..66]
             byte[] bitmaskBytes = new byte[8] {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xF};
             BigInteger bitmask = new BigInteger(bitmaskBytes);
             BigInteger[] bitmasks = new BigInteger[4] {bitmask, bitmask << 2, bitmask << 4, bitmask << 6};
@@ -45,9 +40,7 @@ namespace CS124Project.Genome
                     {
                         double numReadsProbability = _random.NextDouble();
 
-                        int numReads = 0;
-                        while (numReads < pvalues.Count() && numReadsProbability > pvalues[numReads])
-                            numReads++;
+                        int numReads = (int)Math.Round(numReadsProbability*coverage/15.0, MidpointRounding.AwayFromZero);
 
                         readCount += numReads;
 
