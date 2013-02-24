@@ -2,7 +2,7 @@
 {
     internal interface ISuffixArray
     {
-        uint GetCharacterIndex(long suffixArrayIndex);
+        uint this[uint index] { get; }
         long Length { get; }
     }
 }

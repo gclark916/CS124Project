@@ -2,61 +2,20 @@
 
 namespace CS124Project.SAIS
 {
-    class LmsString
+    internal class LmsString
     {
-        private uint _value;
+        private readonly uint _firstCharacterIndex;
+        private readonly uint _lastCharacterIndex;
         private readonly ISaisString _parentString;
-        private readonly long _firstCharacterIndex;
-        private long _lastCharacterIndex;
 
-        public LmsString(ISaisString parentString, long firstCharacterIndex, long lastCharacterIndex)
+        public LmsString(ISaisString parentString, uint firstCharacterIndex, uint lastCharacterIndex)
         {
             _parentString = parentString;
             _firstCharacterIndex = firstCharacterIndex;
             _lastCharacterIndex = lastCharacterIndex;
         }
 
-        public static List<LmsString> GetLmsStrings(ISaisString text, TypeArray types)
-        {
-            List<LmsString> lmsStrings = new List<LmsString>();
-
-            lmsStrings.Add(new LmsString(text, text.Length, text.Length));
-            SaisType succeedingType = SaisType.S; /* last character is always S type */
-            long succeedingLmsCharIndex = text.Length;
-            for (long index = text.Length-1; index >= 0; index--)
-            {
-                SaisType currentType = types.GetType(index);
-                if (succeedingType == SaisType.L && currentType == SaisType.S)
-                {
-                    lmsStrings.Insert(0, new LmsString(text, index, succeedingLmsCharIndex));
-                    succeedingLmsCharIndex = index;
-                }
-                succeedingType = currentType;
-            }
-
-            return lmsStrings;
-        }
-
-        public static int CompareValues(LmsString x, LmsString y)
-        {
-            long index = 0;
-            int result = 0;
-            while (result == 0)
-            {
-                if (index == x.Length && x.Length == y.Length)
-                    break;
-                result = x.GetCharacter(index).CompareTo(y.GetCharacter(index));
-                if (result == 0)
-                {
-                    result = x.GetCharacterType(index).CompareTo(y.GetCharacterType(index));
-                }
-                index++;
-            }
-
-            return result;
-        }
-
-        protected long Length
+        public uint Length
         {
             get { return _lastCharacterIndex - _firstCharacterIndex + 1; }
         }
@@ -68,16 +27,62 @@ namespace CS124Project.SAIS
             get { return _firstCharacterIndex; }
         }
 
-        private SaisType GetCharacterType(long index)
+        public static List<LmsString> GetLmsStrings(ISaisString text)
         {
-            SaisType characterType = _parentString.GetCharacterType(index + _firstCharacterIndex);
-            return characterType;
+            List<LmsString> lmsStrings = new List<LmsString>();
+
+            SaisType previousType = text.Types[0];
+            uint previousLmsCharacterIndex = 0;
+            for (uint index = 0; index < text.Length; index++)
+            {
+                SaisType currentType = text.Types[index];
+                if (previousType == SaisType.L && currentType == SaisType.S)
+                {
+                    if (previousLmsCharacterIndex > 0)
+                        lmsStrings.Add(new LmsString(text, previousLmsCharacterIndex, index));
+                    previousLmsCharacterIndex = index;
+                }
+                previousType = currentType;
+            }
+
+            //TODO: need to check if adding an LMS String for $ is necessary for LevelNSuffixArrays
+            lmsStrings.Add(new LmsString(text, text.Length-1, text.Length-1));
+
+            return lmsStrings;
         }
 
-        private long GetCharacter(long index)
+        public static int CompareValues(LmsString x, LmsString y)
         {
-            long character = _parentString.GetCharacter(index + _firstCharacterIndex);
-            return character;
+            uint index = 0;
+            int result = 0;
+            while (result == 0)
+            {
+                if (index == x.Length && x.Length == y.Length)
+                    break;
+                result = x[index].CompareTo(y[index]);
+                if (result == 0)
+                {
+                    result = x.GetCharacterType(index).CompareTo(y.GetCharacterType(index));
+                }
+                index++;
+            }
+
+            return result;
+        }
+
+        protected uint this[uint index]
+        {
+            get 
+            { 
+                var character = _parentString[index + _firstCharacterIndex];
+                return character; 
+            }
+        }
+
+        private SaisType GetCharacterType(long index)
+        {
+            SaisType characterType = _parentString.Types[index + _firstCharacterIndex];
+            return characterType;
         }
     }
 }

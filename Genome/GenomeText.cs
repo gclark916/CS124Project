@@ -5,6 +5,8 @@
         private readonly byte[] _text;
         private readonly long _length;
 
+        public byte[] Bytes { get { return _text; } }
+
         public GenomeText(byte[] text, long length)
         {
             _text = text;
