@@ -27,9 +27,9 @@ namespace CS124Project.SAIS
             for (int writeIndex = 0, totalWrites = (int) (text.Length/buffer.Length + 1);
                  writeIndex < totalWrites;
                  writeIndex++)
-                _suffixArray.Write(buffer, writeIndex*buffer.Length, buffer.Length);
+                _suffixArray.Write(buffer, 0, buffer.Length);
 
-            CreateSuffixArray();
+            CreateSuffixArray(0);
         }
 
         public override uint this[uint index]

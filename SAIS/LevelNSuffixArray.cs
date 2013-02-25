@@ -7,24 +7,29 @@ namespace CS124Project.SAIS
 {
     internal class LevelNSuffixArray : BaseSuffixArray
     {
-        private readonly int[] _suffixArray;
+        private readonly uint[] _suffixArray;
 
-        public LevelNSuffixArray(ISaisString text, bool skipRecursion) : base(text)
+        public LevelNSuffixArray(ISaisString text, bool skipRecursion, int level) : base(text)
         {
+            _suffixArray = new uint[text.Length];
+
             if (skipRecursion)
             {
-                _suffixArray = Enumerable.Range(0, (int) text.Length).ToArray();
+                for (uint i = 0; i < Length; i++)
+                    _suffixArray[i] = i;
                 return;
             }
 
-            _suffixArray = new int[text.Length];
-            CreateSuffixArray();
+            for (uint i = 0; i < Length; i++)
+                _suffixArray[i] = uint.MaxValue;
+
+            CreateSuffixArray(level);
         }
 
         public override uint this[uint index]
         {
-            get { return (uint) _suffixArray[index]; }
-            protected set { _suffixArray[index] = (int) value; }
+            get { return _suffixArray[index]; }
+            protected set { _suffixArray[index] = value; }
         }
 
         public override string ToString()

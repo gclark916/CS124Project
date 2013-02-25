@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -20,21 +21,27 @@ namespace CS124Project
             randomGenerator.GenerateRandomGenome(genomeFilePath);
             shortReadReader.GenerateReads(genomeFilePath, shortreadsFilePath, 0.1, 4, 1.0);*/
 
-            const string testString = "ccaattaattaaggaa";
-            GenomeText genome = GenomeText.CreateGenomeFromString(testString);
+            //string testString = File.ReadAllText("chr22.dna");
+            //const string testString = "ccaattaattaaggaa";
+           /* GenomeText genome = GenomeText.CreateGenomeFromString(testString);
             ISaisString text = new Level0String(genome);
-            Level0SuffixArray suffixArray = new Level0SuffixArray("text.sa", text);
+            Level0MemorySuffixArray suffixArray = new Level0MemorySuffixArray(text);
 
-
-            /*uint[] suffixArray = new uint[] {6, 3, 0, 5, 2, 4, 1};
-            TrieNode root = TrieNode.CreateTrie(text, suffixArray);
-            TrieAligner aligner = new TrieAligner(root, suffixArray, text);
+            suffixArray.WriteToFile("output.sa");*/
+            string testString = "aggagc";
+            uint[] suffixArray = new uint[] {6, 3, 0, 5, 2, 4, 1};
+            uint[] inverseSA = new uint[suffixArray.Length];
+            for (uint i = 0; i < suffixArray.Length; i++)
+                inverseSA[suffixArray[i]] = i;
+            GenomeText genome = GenomeText.CreateGenomeFromString(testString);
+            TrieNode root = new TrieNode(0, testString.Length, suffixArray, inverseSA, genome);
+            TrieAligner aligner = new TrieAligner(root, suffixArray, genome);
             var alignments = aligner.GetAlignments(GenomeText.CreateGenomeFromString("g")); 
 
             foreach (var alignment in alignments)
             {
                 Console.WriteLine("{0} {1}", alignment, testString.Substring((int) alignment));
-            }*/
+            }
         }
     }
 }

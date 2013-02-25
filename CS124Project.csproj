@@ -11,6 +11,7 @@
     <AssemblyName>CS124Project</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
@@ -23,7 +24,6 @@
     <MapFileExtensions>true</MapFileExtensions>
     <ApplicationRevision>0</ApplicationRevision>
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
-    <IsWebBootstrapper>false</IsWebBootstrapper>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
@@ -61,7 +61,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
-    <PlatformTarget>x64</PlatformTarget>
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <Prefer32Bit>true</Prefer32Bit>
@@ -92,6 +92,7 @@
     <Compile Include="SAIS\BaseSuffixArray.cs" />
     <Compile Include="SAIS\ISaisString.cs" />
     <Compile Include="SAIS\ISuffixArray.cs" />
+    <Compile Include="SAIS\Level0MemorySuffixArray.cs" />
     <Compile Include="SAIS\Level0SuffixArray.cs" />
     <Compile Include="SAIS\LevelNString.cs" />
     <Compile Include="SAIS\LevelNSuffixArray.cs" />

@@ -9,17 +9,17 @@ namespace CS124Project.SAIS
     [System.Diagnostics.DebuggerDisplay("{ToString()}")]
     class LevelNString : ISaisString
     {
-        private readonly uint[] _text;
+        private readonly LmsStringStruct[] _text;
         public uint Length { get { return (uint) _text.Length; } }
         public uint[] BucketIndices { get { return Types.BucketIndices; } }
         public TypeArray Types { get; set; }
 
         public uint this[uint index]
         {
-            get { return _text[(int) index]; }
+            get { return _text[index].Value; }
         }
 
-        public LevelNString(uint[] text)
+        public LevelNString(LmsStringStruct[] text)
         {
             _text = text;
         }

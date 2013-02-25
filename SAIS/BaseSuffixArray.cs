@@ -20,40 +20,55 @@ namespace CS124Project.SAIS
             _length = text.Length;
         }
 
-        public void CreateSuffixArray()
+        public void CreateSuffixArray(int recursionLevel)
         {
+            DateTime determineTypesStartTime = DateTime.Now;
+
             Text.Types = new TypeArray(Text);
 
+            Console.WriteLine("{0} characters at level {1}. Took {2} seconds determine types.", Text.Length,
+                              recursionLevel, DateTime.Now.Subtract(determineTypesStartTime).TotalSeconds);
+
             /* Scan for LMS-characters and get LMS-Strings */
-            List<LmsString> lmsStrings = LmsString.GetLmsStrings(Text);
+            LmsStringStruct[] lmsStringStructs = LmsString.GetLmsStrings(Text);
 
-            uint[] lmsCharacterIndices = lmsStrings.Select(l => (uint)l.FirstIndex).ToArray();
+            DateTime lmsStringsSortTimeStart = DateTime.Now;
 
-            lmsStrings.Sort(LmsString.CompareValues);
+            LmsStringStruct.ValueComparer lmsComparer = new LmsStringStruct.ValueComparer(Text);
+            Array.Sort(lmsStringStructs, lmsComparer);
+
+            Console.WriteLine("{0} LMS strings at level {1}. Took {2} seconds to sort.", lmsStringStructs.Length,
+                              recursionLevel, DateTime.Now.Subtract(lmsStringsSortTimeStart).TotalSeconds);
+
+            DateTime assignNamesStartTime = DateTime.Now;
 
             /* Assign values to LMS-Strings */
             uint lmsValue = 0;
-            lmsStrings[0].Value = 0;
-            for (int index = 1; index < lmsStrings.Count; index++) /* assuming there are less than 2^31 LMS-Strings */
+            lmsStringStructs[0].Value = 0;
+            for (int index = 1; index < lmsStringStructs.Length; index++) /* assuming there are less than 2^31 LMS-Strings */
             {
-                if (LmsString.CompareValues(lmsStrings[index], lmsStrings[index - 1]) == 0)
-                    lmsStrings[index].Value = lmsValue;
+                if (lmsComparer.Compare(lmsStringStructs[index], lmsStringStructs[index - 1]) == 0)
+                    lmsStringStructs[index].Value = lmsValue;
                 else
-                    lmsStrings[index].Value = ++lmsValue;
+                    lmsStringStructs[index].Value = ++lmsValue;
             }
+
+            Console.WriteLine("{0} buckets at level {1}. Name assigning took {2} seconds", lmsValue, recursionLevel, System.DateTime.Now.Subtract(assignNamesStartTime).TotalSeconds);
 
             /* Do a recursive call if the LMS-Strings are not unique */
             ISuffixArray inducedSufArray;
-            lmsStrings.Sort((l1, l2) => l1.FirstIndex.CompareTo(l2.FirstIndex));
-            LevelNString levelNString = new LevelNString(lmsStrings.Select(l => l.Value).ToArray());
-            if (lmsValue < lmsStrings.Count - 1)
+            Array.Sort(lmsStringStructs, (l1, l2) => l1.FirstCharacterIndex.CompareTo(l2.FirstCharacterIndex));
+            LevelNString levelNString = new LevelNString(lmsStringStructs);
+            if (lmsValue < lmsStringStructs.Length - 1)
             {
-                inducedSufArray = new LevelNSuffixArray(levelNString, false);
+                inducedSufArray = new LevelNSuffixArray(levelNString, false, recursionLevel+1);
             }
             else
             {
-                inducedSufArray = new LevelNSuffixArray(levelNString, true);
+                inducedSufArray = new LevelNSuffixArray(levelNString, true, recursionLevel+1);
             }
+
+            DateTime step1PassStart = DateTime.Now;
 
             /* Set up buckets so we can set the head in right spot for each pass */
             var bucketIndices = Text.BucketIndices;
@@ -67,12 +82,17 @@ namespace CS124Project.SAIS
             for (long inducedSaIndex = inducedSufArray.Length - 1; inducedSaIndex >= 0; inducedSaIndex--)
             {
                 var inducedCharIndex = inducedSufArray[(uint) inducedSaIndex];
-                var characterIndex = lmsCharacterIndices[inducedCharIndex];
+                var characterIndex = lmsStringStructs[inducedCharIndex].FirstCharacterIndex;
                 var bucketIndex = Text[characterIndex];
                 var bucketHead = bucketHeads[bucketIndex];
                 this[bucketHead] = characterIndex;
                 bucketHeads[bucketIndex] = bucketHeads[bucketIndex] - 1;
             }
+
+            Console.WriteLine("Took {0} seconds to finish step 1 at level {1}.",
+                              DateTime.Now.Subtract(step1PassStart).TotalSeconds, recursionLevel);
+
+            DateTime step2Start = DateTime.Now;
 
             /* Step 2. Start by setting heads to beginning of buckets */
             SetBucketHeads(bucketIndices, bucketHeads, true);
@@ -98,6 +118,11 @@ namespace CS124Project.SAIS
                 }
             }
 
+            Console.WriteLine("Took {0} seconds to finish step 2 at level {1}.",
+                              DateTime.Now.Subtract(step2Start).TotalSeconds, recursionLevel);
+
+            DateTime step3Start = DateTime.Now;
+
             /* Step 3. Start by setting heads to end of buckets */
             SetBucketHeads(bucketIndices, bucketHeads, false);
 
@@ -120,6 +145,9 @@ namespace CS124Project.SAIS
                     }
                 }
             }
+
+            Console.WriteLine("Took {0} seconds to finish step 3 at level {1}.",
+                              DateTime.Now.Subtract(step3Start).TotalSeconds, recursionLevel);
         }
 
         uint DefaultValue
