@@ -11,22 +11,21 @@ namespace CS124Project.Trie
     {
         private readonly TrieNode _root;
         private readonly uint[] _suffixArray;
-        private GenomeText _text;
 
         public TrieAligner(TrieNode root, uint[] suffixArray, GenomeText text)
         {
             _root = root;
             _suffixArray = suffixArray;
-            _text = text;
         }
 
         public uint[] GetAlignments(GenomeText shortRead)
         {
-            var rangeTuple = GetSuffixArrayRange(shortRead, shortRead.Length - 1, _root);
-            var range = rangeTuple.Item2 - rangeTuple.Item1 + 1;
+            long min, max;
+            GetSuffixArrayRange(shortRead, shortRead.Length - 1, _root, out min, out max);
+            var range = max - min + 1;
             uint[] alignments = new uint[range];
-            for (long suffixArrayIndex = rangeTuple.Item1, alignmentsIndex = 0;
-                suffixArrayIndex <= rangeTuple.Item2; 
+            for (long suffixArrayIndex = min, alignmentsIndex = 0;
+                suffixArrayIndex <= max; 
                 suffixArrayIndex++, alignmentsIndex++)
             {
                 alignments[alignmentsIndex] = _suffixArray[suffixArrayIndex];
@@ -35,17 +34,24 @@ namespace CS124Project.Trie
             return alignments;
         }
 
-        private Tuple<long, long> GetSuffixArrayRange(GenomeText shortRead, long index, TrieNode root)
+        private bool GetSuffixArrayRange(GenomeText shortRead, long index, TrieNode root, out long min, out long max)
         {
+            min = long.MaxValue;
+            max = long.MinValue;
+
             if (root == null)
-                return null;
+                return false;
 
             var baseToAlign = shortRead.GetBase(index);
             var child = root.GetChild(baseToAlign);
             if (index == 0)
-                return new Tuple<long, long>(child.Min, child.Max);
+            {
+                min = child.Min;
+                max = child.Max;
+                return true;
+            }
 
-            return GetSuffixArrayRange(shortRead, index - 1, child);
+            return GetSuffixArrayRange(shortRead, index - 1, child, out min, out max);
         }
     }
 }
