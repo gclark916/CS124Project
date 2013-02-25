@@ -29,7 +29,7 @@ namespace CS124Project.SAIS
                  writeIndex++)
                 _suffixArray.Write(buffer, 0, buffer.Length);
 
-            CreateSuffixArray(0);
+            CreateSuffixArray2(0);
         }
 
         public override uint this[uint index]

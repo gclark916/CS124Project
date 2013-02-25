@@ -21,14 +21,38 @@ namespace CS124Project
             randomGenerator.GenerateRandomGenome(genomeFilePath);
             shortReadReader.GenerateReads(genomeFilePath, shortreadsFilePath, 0.1, 4, 1.0);*/
 
-            //string testString = File.ReadAllText("chr22.dna");
+            string testString = File.ReadAllText("chr22NoN.dna");
             //const string testString = "ccaattaattaaggaa";
-           /* GenomeText genome = GenomeText.CreateGenomeFromString(testString);
+            GenomeText genome = GenomeText.CreateGenomeFromString(testString);
             ISaisString text = new Level0String(genome);
             Level0MemorySuffixArray suffixArray = new Level0MemorySuffixArray(text);
 
-            suffixArray.WriteToFile("output.sa");*/
-            string testString = "aggagc";
+            
+            var bwtBuilder = new StringBuilder();
+            for (uint i = 0; i < suffixArray.Length; i++)
+            {
+                var textIndex = suffixArray[i] - 1 != uint.MaxValue ? suffixArray[i] - 1 : text.Length-1;
+                var character = text[textIndex];
+                switch (character)
+                {
+                    case 1:
+                        bwtBuilder.Append('A');
+                        break;
+                    case 2:
+                        bwtBuilder.Append('C');
+                        break;
+                    case 3:
+                        bwtBuilder.Append('G');
+                        break;
+                    case 4:
+                        bwtBuilder.Append('T');
+                        break;
+                }
+            }
+            File.WriteAllText("bwt.bwt", bwtBuilder.ToString());
+
+            suffixArray.WriteToFile("output.sa");
+            /*string testString = "aggagc";
             uint[] suffixArray = new uint[] {6, 3, 0, 5, 2, 4, 1};
             uint[] inverseSA = new uint[suffixArray.Length];
             for (uint i = 0; i < suffixArray.Length; i++)
@@ -41,7 +65,7 @@ namespace CS124Project
             foreach (var alignment in alignments)
             {
                 Console.WriteLine("{0} {1}", alignment, testString.Substring((int) alignment));
-            }
+            }*/
         }
     }
 }
