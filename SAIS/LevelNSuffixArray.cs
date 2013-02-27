@@ -23,7 +23,7 @@ namespace CS124Project.SAIS
             for (uint i = 0; i < Length; i++)
                 _suffixArray[i] = uint.MaxValue;
 
-            CreateSuffixArray2(level);
+            CreateSuffixArray(level);
         }
 
         public override uint this[uint index]

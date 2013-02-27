@@ -1,13 +1,13 @@
 ﻿namespace CS124Project.Genome
 {
-    class GenomeText : IGenomeText
+    class DnaSequence
     {
         private readonly byte[] _text;
         private readonly long _length;
 
         public byte[] Bytes { get { return _text; } }
 
-        public GenomeText(byte[] text, long length)
+        public DnaSequence(byte[] text, long length)
         {
             _text = text;
             _length = length;
@@ -15,17 +15,17 @@
 
         public long Length { get { return _length; } }
 
-        public virtual Base GetBase(long index)
+        public virtual DnaBase GetBase(long index)
         {
             if (index >= _length)
-                return Base.Sentinel;
+                return DnaBase.Sentinel;
             var byteIndex = index / 4;
             int shift = (int) (2 * ((index) % 4));
             int baseByte = ((_text[byteIndex] >> shift) & 0x3);
-            return (Base) baseByte;
+            return (DnaBase) baseByte;
         }
 
-        public static GenomeText CreateGenomeFromString(string text)
+        public static DnaSequence CreateGenomeFromString(string text)
         {
             var byteArrayLength = text.Length/4 + (text.Length%4 == 0 ? 0 : 1);
             byte[] binaryText = new byte[byteArrayLength];
@@ -55,7 +55,7 @@
                 binaryText[text.Length/4] = finalByte;
             }
 
-            return new GenomeText(binaryText, (uint) text.Length);
+            return new DnaSequence(binaryText, text.Length);
         }
 
         protected static byte StringCharToBaseByte(char c)
@@ -79,50 +79,15 @@
             }
         }
 
-        public IGenomeText SubString(long offset, long length)
+        public int this[long index]
         {
-            return new SubGenomeText(this, offset, length);
+            get
+            {
+                var byteIndex = index / 4;
+                int shift = (int)(2 * ((index) % 4));
+                int baseByte = ((_text[byteIndex] >> shift) & 0x3);
+                return baseByte;
+            }
         }
-    }
-
-    internal class SubGenomeText : IGenomeText
-    {
-        private readonly long _offset;
-        private readonly long _length;
-        private readonly GenomeText _parentGenome;
-
-        public long Length { get { return _length; } }
-
-        public IGenomeText SubString(long offset, long length)
-        {
-            return new SubGenomeText(_parentGenome, _offset + offset, length);
-        }
-
-        public SubGenomeText(GenomeText parent, long offset, long length)
-        {
-            _parentGenome = parent;
-            _length = length;
-            _offset = offset;
-        }
-
-        public Base GetBase(long index)
-        {
-            if (index >= _length)
-                return Base.Sentinel;
-
-            return _parentGenome.GetBase(index + _offset);
-        }
-    }
-
-    internal interface IGenomeText
-    {
-        Base GetBase(long index);
-        long Length { get; }
-        IGenomeText SubString(long offset, long length);
-    }
-
-    internal enum Base
-    {
-        Sentinel = -1, A = 0, C = 1, G = 2, T = 3
     }
 }

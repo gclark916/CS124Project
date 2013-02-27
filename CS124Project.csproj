@@ -83,22 +83,20 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BWT\BwtAligner.cs" />
-    <Compile Include="BWT\String.cs" />
+    <Compile Include="Genome\DnaSequence.cs" />
     <Compile Include="Genome\Generator.cs" />
-    <Compile Include="Genome\GenomeText.cs" />
+    <Compile Include="Genome\DnaBase.cs" />
     <Compile Include="Genome\Reader.cs" />
     <Compile Include="Genome\Searcher.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SAIS\BaseSuffixArray.cs" />
-    <Compile Include="SAIS\BetterLevelNString.cs" />
+    <Compile Include="SAIS\LevelNString.cs" />
     <Compile Include="SAIS\ISaisString.cs" />
     <Compile Include="SAIS\ISuffixArray.cs" />
     <Compile Include="SAIS\Level0MemorySuffixArray.cs" />
     <Compile Include="SAIS\Level0SuffixArray.cs" />
-    <Compile Include="SAIS\LevelNString.cs" />
     <Compile Include="SAIS\LevelNSuffixArray.cs" />
-    <Compile Include="SAIS\LmsStringStruct.cs" />
     <Compile Include="SAIS\SaisType.cs" />
     <Compile Include="SAIS\Level0String.cs" />
     <Compile Include="SAIS\TypeArray.cs" />

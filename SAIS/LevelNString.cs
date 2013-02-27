@@ -1,25 +1,25 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace CS124Project.SAIS
 {
     [System.Diagnostics.DebuggerDisplay("{ToString()}")]
     class LevelNString : ISaisString
     {
-        private readonly LmsStringStruct[] _text;
+        private readonly uint[] _text;
         public uint Length { get { return (uint) _text.Length; } }
         public uint[] BucketIndices { get { return Types.BucketIndices; } }
         public TypeArray Types { get; set; }
 
         public uint this[uint index]
         {
-            get { return _text[index].Value; }
+            get
+            {
+                return _text[index];
+            }
         }
 
-        public LevelNString(LmsStringStruct[] text)
+        public LevelNString(uint[] text)
         {
             _text = text;
         }
@@ -32,7 +32,7 @@ namespace CS124Project.SAIS
                 builder.Append(this[i]);
                 builder.Append(' ');
             }
-                return base.ToString();
+            return base.ToString();
         }
     }
 }

@@ -9,175 +9,97 @@ namespace CS124Project.SAIS
     abstract class BaseSuffixArray : ISuffixArray
     {
         private readonly ISaisString _text;
-        private readonly long _length;
+        private readonly uint _length;
 
         protected ISaisString Text { get { return _text; } }
-        public long Length { get { return _length; } }
+        public uint Length { get { return _length; } }
 
         protected BaseSuffixArray(ISaisString text)
         {
             _text = text;
             _length = text.Length;
         }
-        
+
         public void CreateSuffixArray(int recursionLevel)
         {
+
             DateTime determineTypesStartTime = DateTime.Now;
-
-            Text.Types = new TypeArray(Text);
-
+            TypeArray types = new TypeArray(Text);
+            Text.Types = types;
             Console.WriteLine("{0} characters at level {1}. Took {2} seconds determine types.", Text.Length,
                               recursionLevel, DateTime.Now.Subtract(determineTypesStartTime).TotalSeconds);
 
-            /* Scan for LMS-characters and get LMS-Strings */
-            LmsStringStruct[] lmsStringStructs = LmsStringStruct.GetLmsStringStructs(Text);
+            var bucketIndices = Text.BucketIndices;
+            uint[] bucketHeads = new uint[bucketIndices.Length];
+
+            // Sort S substrings
+            SetBucketHeads(bucketIndices, bucketHeads, false);
 
             DateTime lmsStringsSortTimeStart = DateTime.Now;
 
-            LmsStringStruct.ValueComparer lmsComparer = new LmsStringStruct.ValueComparer(Text);
-            Array.Sort(lmsStringStructs, lmsComparer);
+            uint lmsCharacterCount = 0;
+            for (uint textIndex = 1; textIndex < Text.Length; textIndex++)
+            {
+                if (IsLmsCharacter(textIndex))
+                {
+                    var bucket = Text[textIndex];
+                    var bucketHead = bucketHeads[bucket];
+                    this[bucketHead] = textIndex;
+                    bucketHeads[bucket] = bucketHeads[bucket] - 1;
+                    lmsCharacterCount++;
+                }
+            }
 
-            Console.WriteLine("{0} LMS strings at level {1}. Took {2} seconds to sort.", lmsStringStructs.Length,
+            InduceSAl(bucketIndices, bucketHeads);
+            InduceSAs(bucketIndices, bucketHeads);
+
+            Console.WriteLine("{0} LMS strings at level {1}. Took {2} seconds to sort.", lmsCharacterCount,
                               recursionLevel, DateTime.Now.Subtract(lmsStringsSortTimeStart).TotalSeconds);
 
-            DateTime assignNamesStartTime = DateTime.Now;
-
-            /* Assign values to LMS-Strings */
-            uint lmsValue = 0;
-            lmsStringStructs[0].Value = 0;
-            for (int index = 1; index < lmsStringStructs.Length; index++) /* assuming there are less than 2^31 LMS-Strings */
-            {
-                if (lmsComparer.Compare(lmsStringStructs[index], lmsStringStructs[index - 1]) == 0)
-                    lmsStringStructs[index].Value = lmsValue;
-                else
-                    lmsStringStructs[index].Value = ++lmsValue;
-            }
-
-            Console.WriteLine("{0} buckets at level {1}. Name assigning took {2} seconds", lmsValue, recursionLevel, DateTime.Now.Subtract(assignNamesStartTime).TotalSeconds);
-
-            /* Do a recursive call if the LMS-Strings are not unique */
-            ISuffixArray inducedSufArray;
-            Array.Sort(lmsStringStructs, (l1, l2) => l1.FirstCharacterIndex.CompareTo(l2.FirstCharacterIndex));
-            LevelNString levelNString = new LevelNString(lmsStringStructs);
-            if (lmsValue < lmsStringStructs.Length - 1)
-            {
-                inducedSufArray = new LevelNSuffixArray(levelNString, false, recursionLevel+1);
-            }
-            else
-            {
-                inducedSufArray = new LevelNSuffixArray(levelNString, true, recursionLevel+1);
-            }
-
-            DateTime step1Start = DateTime.Now;
-
-            /* Set up buckets so we can set the head in right spot for each pass */
-            var bucketIndices = Text.BucketIndices;
-            uint[] bucketHeads = new uint[bucketIndices.Length];
-
-            Step1(bucketIndices, bucketHeads, inducedSufArray, lmsStringStructs);
-
-            Console.WriteLine("Took {0} seconds to finish step 1 at level {1}.",
-                              DateTime.Now.Subtract(step1Start).TotalSeconds, recursionLevel);
-
-            DateTime step2Start = DateTime.Now;
-
-            Step2(bucketIndices, bucketHeads);
-
-            Console.WriteLine("Took {0} seconds to finish step 2 at level {1}.",
-                              DateTime.Now.Subtract(step2Start).TotalSeconds, recursionLevel);
-
-            DateTime step3Start = DateTime.Now;
-
-            Step3(bucketIndices, bucketHeads);
-
-            Console.WriteLine("Took {0} seconds to finish step 3 at level {1}.",
-                              DateTime.Now.Subtract(step3Start).TotalSeconds, recursionLevel);
-        }
-
-        public void CreateSuffixArray2(int recursionLevel)
-        {
-            DateTime determineTypesStartTime = DateTime.Now;
-
-            Text.Types = new TypeArray(Text);
-
-            Console.WriteLine("{0} characters at level {1}. Took {2} seconds determine types.", Text.Length,
-                              recursionLevel, DateTime.Now.Subtract(determineTypesStartTime).TotalSeconds);
-
-            /* Set up buckets so we can set the head in right spot for each pass */
-            var bucketIndices = Text.BucketIndices;
-            uint[] bucketHeads = new uint[bucketIndices.Length];
-
-            /* Scan for LMS-characters and get LMS-Strings */
-
-            DateTime lmsStringsSortTimeStart = DateTime.Now;
-
-            uint lmsStringCount;
-            SortLmsStrings(bucketIndices, bucketHeads, out lmsStringCount);
-
-            // Populate P (array of LMS-String start indices)
-            uint[] P = new uint[lmsStringCount];
+            uint[] P = new uint[lmsCharacterCount];
             for (uint textIndex = 1, pIndex = 0; textIndex < Text.Length; textIndex++)
             {
                 if (IsLmsCharacter(textIndex))
                     P[pIndex++] = textIndex;
             }
 
-            Console.WriteLine("{0} LMS strings at level {1}. Took {2} seconds to sort.", P.Length,
-                                  recursionLevel, DateTime.Now.Subtract(lmsStringsSortTimeStart).TotalSeconds);
-
-            DateTime assignNamesStartTime = DateTime.Now;
-
-            /* Assign values to LMS-Strings */
-            uint name = 0;
+            // Assign names to LMS substrings
             uint[] S1 = new uint[P.Length];
-            S1[P.Length-1] = 0;
-            uint previousLmsStringIndex = Text.Length - 1; 
+            S1[S1.Length - 1] = 0;
+            uint name = 0, prevLmsIndex = uint.MaxValue;
             for (uint saIndex = 1; saIndex < Length; saIndex++)
             {
-                var textIndex = this[saIndex];
-                if (IsLmsCharacter(textIndex))
-                {
-                    uint pIndex = (uint)Array.BinarySearch(P, textIndex);
-                    if (LmsStringsAreEqual(textIndex, previousLmsStringIndex))
-                        S1[pIndex] = name;
-                    else
-                        S1[pIndex] = ++name;
-                    previousLmsStringIndex = textIndex;
-                }
+                uint textIndex = this[saIndex];
+                if (!IsLmsCharacter(textIndex)) 
+                    continue;
+
+                uint pIndex = (uint)Array.BinarySearch(P, textIndex);
+                if (LmsStringsAreEqual(textIndex, prevLmsIndex))
+                    S1[pIndex] = name;
+                else
+                    S1[pIndex] = ++name;
+                prevLmsIndex = textIndex;
             }
 
-                Console.WriteLine("{0} buckets at level {1}. Name assigning took {2} seconds", name, recursionLevel, DateTime.Now.Subtract(assignNamesStartTime).TotalSeconds);
-
-            /* Do a recursive call if the LMS-Strings are not unique */
-            BetterLevelNString levelNString = new BetterLevelNString(S1);
             LevelNSuffixArray SA1;
-            if (name + 1 < P.Length)
-            {
+            LevelNString levelNString = new LevelNString(S1);
+            if(name + 1 < P.Length)
                 SA1 = new LevelNSuffixArray(levelNString, false, recursionLevel + 1);
-            }
             else
-            {
                 SA1 = new LevelNSuffixArray(levelNString, true, recursionLevel + 1);
-            }
 
             DateTime step1Start = DateTime.Now;
-
             Step1_2(bucketIndices, bucketHeads, SA1, P);
-
             Console.WriteLine("Took {0} seconds to finish step 1 at level {1}.",
                               DateTime.Now.Subtract(step1Start).TotalSeconds, recursionLevel);
 
             DateTime step2Start = DateTime.Now;
-
-            Step2(bucketIndices, bucketHeads);
-
+            InduceSAl(bucketIndices, bucketHeads);
             Console.WriteLine("Took {0} seconds to finish step 2 at level {1}.",
                               DateTime.Now.Subtract(step2Start).TotalSeconds, recursionLevel);
 
             DateTime step3Start = DateTime.Now;
-
-            Step3(bucketIndices, bucketHeads);
-
+            InduceSAs(bucketIndices, bucketHeads);
             Console.WriteLine("Took {0} seconds to finish step 3 at level {1}.",
                               DateTime.Now.Subtract(step3Start).TotalSeconds, recursionLevel);
         }
@@ -209,41 +131,9 @@ namespace CS124Project.SAIS
             return false;
         }
 
-        void SortLmsStrings(uint[] bucketIndices, uint[] bucketHeads, out uint lmsStringCount)
-        {
-            uint lmsCharacterCount;
-            LmsSortingStep1(bucketIndices, bucketHeads, out lmsCharacterCount);
-            Step2(bucketIndices, bucketHeads);
-            Step3(bucketIndices, bucketHeads);
-
-            lmsStringCount = lmsCharacterCount;
-        }
-
-        void LmsSortingStep1(uint[] bucketIndices, uint[] bucketHeads, out uint lmsCharacterCount)
-        {
-            lmsCharacterCount = 0;
-            /* Step 1. Start by setting heads to end of buckets */
-            SetBucketHeads(bucketIndices, bucketHeads, false);
-
-            /* Scan *S* once from right to left, put *LMS-String start index* to the current end of its bucket in
-             * SA and forward the bucket’s end one item to the left. */
-            // Skip pos 1 since it can't be an LMS character
-            for (uint textIndex = 1; textIndex < Text.Length; textIndex++)
-            {
-                if (IsLmsCharacter(textIndex))
-                {
-                    lmsCharacterCount++;
-                    var bucketIndex = Text[textIndex];
-                    var bucketHead = bucketHeads[bucketIndex];
-                    this[bucketHead] = textIndex;
-                    bucketHeads[bucketIndex] = bucketHeads[bucketIndex] - 1;
-                }
-            }
-        }
-
         private bool IsLmsCharacter(uint textIndex)
         {
-            return textIndex > 0 && Text.Types[textIndex] == SaisType.S && Text.Types[textIndex - 1] == SaisType.L
+            return textIndex != DefaultValue && textIndex > 0 && Text.Types[textIndex] == SaisType.S && Text.Types[textIndex - 1] == SaisType.L
                 || textIndex == Text.Length-1;
         }
 
@@ -256,12 +146,12 @@ namespace CS124Project.SAIS
             for (uint i = 0; i < Length; i++)
                 this[i] = DefaultValue;
 
-            /* Scan inducedSA once from right to left, put P[inducedSA[i]] to the current end of the bucket for suf (S; P1[SA1[i]]) in
+            /* Scan SA1 once from right to left, put P[SA1[i]] to the current end of the bucket for suf (S; P1[SA1[i]]) in
                 * SA and forward the bucket’s end one item to the left. P = lmsCharacterIndices*/
-            for (long inducedSaIndex = SA1.Length - 1; inducedSaIndex >= 0; inducedSaIndex--)
+            for (long SA1Index = SA1.Length - 1; SA1Index >= 0; SA1Index--)
             {
-                var inducedCharIndex = SA1[(uint)inducedSaIndex];
-                var characterIndex = P[inducedCharIndex];
+                var SA1Value = SA1[(uint)SA1Index];
+                var characterIndex = P[SA1Value];
                 var bucketIndex = Text[characterIndex];
                 var bucketHead = bucketHeads[bucketIndex];
                 this[bucketHead] = characterIndex;
@@ -269,77 +159,43 @@ namespace CS124Project.SAIS
             }
         }
 
-        void Step1(uint[] bucketIndices, uint[] bucketHeads, ISuffixArray inducedSufArray, LmsStringStruct[] lmsStringStructs)
+        void InduceSAl(uint[] bucketIndices, uint[] bucketHeads)
         {
-            /* Step 1. Start by setting heads to end of buckets */
-            SetBucketHeads(bucketIndices, bucketHeads, false);
-
-            /* Clear SA */
-            for (uint i = 0; i < Length; i++)
-                this[i] = DefaultValue;
-
-            /* Scan inducedSA once from right to left, put P[inducedSA[i]] to the current end of the bucket for suf (S; P1[SA1[i]]) in
-                * SA and forward the bucket’s end one item to the left. P = lmsCharacterIndices*/
-            for (long inducedSaIndex = inducedSufArray.Length - 1; inducedSaIndex >= 0; inducedSaIndex--)
-            {
-                var inducedCharIndex = inducedSufArray[(uint)inducedSaIndex];
-                var characterIndex = lmsStringStructs[inducedCharIndex].FirstCharacterIndex;
-                var bucketIndex = Text[characterIndex];
-                var bucketHead = bucketHeads[bucketIndex];
-                this[bucketHead] = characterIndex;
-                bucketHeads[bucketIndex] = bucketHeads[bucketIndex] - 1;
-            }
-        }
-
-        void Step2(uint[] bucketIndices, uint[] bucketHeads)
-        {
-            /* Step 2. Start by setting heads to beginning of buckets */
             SetBucketHeads(bucketIndices, bucketHeads, true);
 
-            /* Scan SA from left to right, for each non-negative item SA[i], if S[SA[i]−1] is L-type, then put 
-             * SA[i] − 1 to the current head of the bucket for suf (S; SA[i] − 1) and forward that bucket’s head
-             * one item to the right */
             for (uint saIndex = 0; saIndex < Length; saIndex++)
             {
-                var textIndex = this[saIndex];
-                if (textIndex != DefaultValue)
+                if (this[saIndex] == DefaultValue) 
+                    continue;
+
+                var textPos = this[saIndex] - 1 != DefaultValue ? this[saIndex] - 1 : Text.Length-1;
+                    
+                if (textPos < DefaultValue && Text.Types[textPos] == SaisType.L)
                 {
-                    /* SaOfiMinus1 = SA[i]-1. Have to check that if it needs to wrap around */
-                    var SaOfiMinus1 = textIndex == 0 ? Text.Length - 1 : textIndex - 1;
-                    SaisType characterType = Text.Types[SaOfiMinus1];
-                    if (characterType == SaisType.L)
-                    {
-                        var bucketIndex = Text[SaOfiMinus1];
-                        var bucketHead = bucketHeads[bucketIndex];
-                        this[bucketHead] = SaOfiMinus1;
-                        bucketHeads[bucketIndex] = bucketHeads[bucketIndex] + 1;
-                    }
+                    var bucket = Text[textPos];
+                    var bucketHead = bucketHeads[bucket];
+                    this[bucketHead] = textPos;
+                    bucketHeads[bucket] = bucketHeads[bucket] + 1;
                 }
             }
         }
 
-        void Step3(uint[] bucketIndices, uint[] bucketHeads)
+        void InduceSAs(uint[] bucketIndices, uint[] bucketHeads)
         {
-            /* Step 3. Start by setting heads to end of buckets */
             SetBucketHeads(bucketIndices, bucketHeads, false);
 
-            /* Scan SA from right to left, for each non-negative item SA[i], if S[SA[i]−1] is S-type, then
-             * put SA[i] − 1 to the current end of the bucket for suf (S; SA[i] −1) and forward that bucket’s end one
-             * item to the left */
-            for (long saIndex = Length - 1; saIndex >= 0; saIndex--)
+            for(uint saIndex = Length - 1; saIndex != DefaultValue; saIndex--) 
             {
-                var textIndex = this[(uint)saIndex];
-                if (textIndex != DefaultValue)
+                if (this[saIndex] == DefaultValue) 
+                    continue;
+
+                uint textPos = this[saIndex] - 1 != DefaultValue ? this[saIndex] - 1 : Text.Length - 1;
+                if (textPos != uint.MaxValue && Text.Types[textPos] == SaisType.S)
                 {
-                    var SaOfiMinus1 = textIndex == 0 ? Text.Length - 1 : textIndex - 1;
-                    var characterType = Text.Types[SaOfiMinus1];
-                    if (characterType == SaisType.S)
-                    {
-                        var bucketIndex = Text[SaOfiMinus1];
-                        var bucketHead = bucketHeads[bucketIndex];
-                        this[bucketHead] = SaOfiMinus1;
-                        bucketHeads[bucketIndex] = bucketHeads[bucketIndex] - 1;
-                    }
+                    var bucket = Text[textPos];
+                    var bucketHead = bucketHeads[bucket];
+                    this[bucketHead] = textPos;
+                    bucketHeads[bucket] = bucketHeads[bucket] - 1;
                 }
             }
         }

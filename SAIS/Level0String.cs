@@ -44,7 +44,7 @@ namespace CS124Project.SAIS
             _length = length+1; // Add one for sentinel
         }
 
-        public Level0String(GenomeText text)
+        public Level0String(DnaSequence text)
         {
             _text = text.Bytes;
             _length = (uint) (text.Length + 1);

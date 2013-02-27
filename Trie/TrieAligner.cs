@@ -12,13 +12,13 @@ namespace CS124Project.Trie
         private readonly TrieNode _root;
         private readonly uint[] _suffixArray;
 
-        public TrieAligner(TrieNode root, uint[] suffixArray, GenomeText text)
+        public TrieAligner(TrieNode root, uint[] suffixArray, DnaSequence text)
         {
             _root = root;
             _suffixArray = suffixArray;
         }
 
-        public uint[] GetAlignments(GenomeText shortRead)
+        public uint[] GetAlignments(DnaSequence shortRead)
         {
             long min, max;
             GetSuffixArrayRange(shortRead, shortRead.Length - 1, _root, out min, out max);
@@ -34,7 +34,7 @@ namespace CS124Project.Trie
             return alignments;
         }
 
-        private bool GetSuffixArrayRange(GenomeText shortRead, long index, TrieNode root, out long min, out long max)
+        private bool GetSuffixArrayRange(DnaSequence shortRead, long index, TrieNode root, out long min, out long max)
         {
             min = long.MaxValue;
             max = long.MinValue;

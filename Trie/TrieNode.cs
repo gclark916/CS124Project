@@ -8,7 +8,7 @@ namespace CS124Project.Trie
     {
         private readonly TrieNode[] _children;
 
-        public TrieNode(long minSaIndex, long maxSaIndex, uint[] suffixArray, uint[] inverseSA, GenomeText genome)
+        public TrieNode(long minSaIndex, long maxSaIndex, uint[] suffixArray, uint[] inverseSA, DnaSequence genome)
         {
             Min = minSaIndex;
             Max = maxSaIndex;
@@ -49,9 +49,9 @@ namespace CS124Project.Trie
         public long Max { get; set; }
         public long Min { get; set; }
 
-        public TrieNode GetChild(Base edgeBase)
+        public TrieNode GetChild(DnaBase edgeDnaBase)
         {
-            return _children[(int) edgeBase];
+            return _children[(int) edgeDnaBase];
         }
 
         public override string ToString()

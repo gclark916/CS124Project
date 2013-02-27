@@ -65,36 +65,35 @@ namespace CS124Project.SAIS
 
             // Scan backwards
             // Also, keep track of bucket sizes here so we don't have to do it later, since we are scanning whole text
-            SaisType succeedingType = SaisType.S;
-            long succeedingCharacter = 0; /* succeding as in it comes after the currentCharacter in the text.
+            _bucketSizes.Add(0, 1);
+            this[text.Length-1] = SaisType.S;
+            long succeedingChar = 0; /* succeding as in it comes after the currentCharacter in the text.
                                             * since we are iterating backwards, setting it to the sentinel */
-            for (long index = text.Length-1; index >= 0; index--)
+            for (long index = text.Length-2; index >= 0; index--)
             {
-                uint currentCharacter = text[(uint) index];
+                uint currentChar = text[(uint) index];
 
                 uint bucketSize;
-                if (_bucketSizes.TryGetValue(currentCharacter, out bucketSize))
+                if (_bucketSizes.TryGetValue(currentChar, out bucketSize))
                 {
-                    _bucketSizes[currentCharacter] = _bucketSizes[currentCharacter] + 1;
+                    _bucketSizes[currentChar] = _bucketSizes[currentChar] + 1;
                 }
                 else
                 {
-                    _bucketSizes.Add(currentCharacter, 1);
+                    _bucketSizes.Add(currentChar, 1);
                 }
 
-                if (currentCharacter < succeedingCharacter
-                    || (currentCharacter == succeedingCharacter && succeedingType == SaisType.S))
+                if (currentChar < succeedingChar
+                    || (currentChar == succeedingChar && this[index+1] == SaisType.S))
                 {
                     this[index] = SaisType.S;
-                    succeedingType = SaisType.S;
                 }
                 else
                 {
                     this[index] = SaisType.L;
-                    succeedingType = SaisType.L;
                 }
 
-                succeedingCharacter = currentCharacter;
+                succeedingChar = currentChar;
             }
         }
 

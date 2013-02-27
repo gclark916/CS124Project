@@ -21,37 +21,37 @@ namespace CS124Project
             randomGenerator.GenerateRandomGenome(genomeFilePath);
             shortReadReader.GenerateReads(genomeFilePath, shortreadsFilePath, 0.1, 4, 1.0);*/
 
-            string testString = File.ReadAllText("chr22NoN.dna");
+            string testString = File.ReadAllText("small.dna");
             //const string testString = "ccaattaattaaggaa";
-            GenomeText genome = GenomeText.CreateGenomeFromString(testString);
+            DnaSequence genome = DnaSequence.CreateGenomeFromString(testString);
             ISaisString text = new Level0String(genome);
             Level0MemorySuffixArray suffixArray = new Level0MemorySuffixArray(text);
 
-            
-            var bwtBuilder = new StringBuilder();
-            for (uint i = 0; i < suffixArray.Length; i++)
+            using (var output = File.Open("bwt.bwt", FileMode.Create))
             {
-                var textIndex = suffixArray[i] - 1 != uint.MaxValue ? suffixArray[i] - 1 : text.Length-1;
-                var character = text[textIndex];
-                switch (character)
+                for (uint i = 0; i < suffixArray.Length; i++)
                 {
-                    case 1:
-                        bwtBuilder.Append('A');
-                        break;
-                    case 2:
-                        bwtBuilder.Append('C');
-                        break;
-                    case 3:
-                        bwtBuilder.Append('G');
-                        break;
-                    case 4:
-                        bwtBuilder.Append('T');
-                        break;
+                    var textIndex = suffixArray[i] - 1 != uint.MaxValue ? suffixArray[i] - 1 : text.Length - 1;
+                    var character = text[textIndex];
+                    switch (character)
+                    {
+                        case 1:
+                            output.Write(BitConverter.GetBytes('A'), 0, 1);
+                            break;
+                        case 2:
+                            output.Write(BitConverter.GetBytes('C'), 0, 1);
+                            break;
+                        case 3:
+                            output.Write(BitConverter.GetBytes('G'), 0, 1);
+                            break;
+                        case 4:
+                            output.Write(BitConverter.GetBytes('T'), 0, 1);
+                            break;
+                    }
                 }
             }
-            File.WriteAllText("bwt.bwt", bwtBuilder.ToString());
 
-            suffixArray.WriteToFile("output.sa");
+            //suffixArray.WriteToFile("output.sa");
             /*string testString = "aggagc";
             uint[] suffixArray = new uint[] {6, 3, 0, 5, 2, 4, 1};
             uint[] inverseSA = new uint[suffixArray.Length];

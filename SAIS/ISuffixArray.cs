@@ -3,6 +3,6 @@
     internal interface ISuffixArray
     {
         uint this[uint index] { get; }
-        long Length { get; }
+        uint Length { get; }
     }
 }
