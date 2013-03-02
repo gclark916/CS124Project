@@ -1,38 +1,51 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace CS124Project.SAIS
 {
     [System.Diagnostics.DebuggerDisplay("{ToString()}")]
     class LevelNString : ISaisString
     {
-        private readonly uint[] _text;
-        public uint Length { get { return (uint) _text.Length; } }
-        public uint[] BucketIndices { get { return Types.BucketIndices; } }
+        private int[] ParentArray { get; set; }
+        private long Offset { get; set; }
+        public long Length { get; private set; }
         public TypeArray Types { get; set; }
 
-        public uint this[uint index]
+        public int this[long index]
         {
             get
             {
-                return _text[index];
+                if (index < 0 || index >= Length)
+                    throw new IndexOutOfRangeException();
+                return ParentArray[Offset + index];
+            }
+            set
+            {
+                if (index < 0 || index >= Length)
+                    throw new IndexOutOfRangeException();
+                ParentArray[Offset + index] = value;
             }
         }
 
-        public LevelNString(uint[] text)
+        public LevelNString(int[] parentArray, long offset, long length)
         {
-            _text = text;
+            ParentArray = parentArray;
+            Offset = offset;
+            Length = length;
         }
 
         public override string ToString()
         {
             StringBuilder builder = new StringBuilder();
-            for (uint i = 0; i < 10 && i < Length; i++)
+            for (uint i = 0; i < 20 && i < Length; i++)
             {
                 builder.Append(this[i]);
                 builder.Append(' ');
             }
-            return base.ToString();
+            return builder.ToString();
         }
     }
 }

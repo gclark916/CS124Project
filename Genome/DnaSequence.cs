@@ -15,44 +15,34 @@
 
         public long Length { get { return _length; } }
 
-        public virtual DnaBase GetBase(long index)
-        {
-            if (index >= _length)
-                return DnaBase.Sentinel;
-            var byteIndex = index / 4;
-            int shift = (int) (2 * ((index) % 4));
-            int baseByte = ((_text[byteIndex] >> shift) & 0x3);
-            return (DnaBase) baseByte;
-        }
-
         public static DnaSequence CreateGenomeFromString(string text)
         {
-            var byteArrayLength = text.Length/4 + (text.Length%4 == 0 ? 0 : 1);
+            var byteArrayLength = text.Length / 4 + (text.Length % 4 == 0 ? 0 : 1);
             byte[] binaryText = new byte[byteArrayLength];
 
             for (int byteIndex = 0; byteIndex < text.Length / 4; byteIndex++)
             {
-                var stringIndex = byteIndex*4;
+                var stringIndex = byteIndex * 4;
                 byte base0 = StringCharToBaseByte(text[stringIndex]);
                 byte base1 = StringCharToBaseByte(text[stringIndex + 1]);
                 byte base2 = StringCharToBaseByte(text[stringIndex + 2]);
                 byte base3 = StringCharToBaseByte(text[stringIndex + 3]);
 
-                byte baseByte = (byte) (base0 | (base1 << 2) | (base2 << 4) | (base3 << 6));
+                byte baseByte = (byte)(base0 | (base1 << 2) | (base2 << 4) | (base3 << 6));
                 binaryText[byteIndex] = baseByte;
             }
 
             // Add the last byte if necessary
-            if (text.Length%4 != 0)
+            if (text.Length % 4 != 0)
             {
                 byte finalByte = 0;
-                for (int index = (text.Length/4)*4; index < text.Length; index++)
+                for (int index = (text.Length / 4) * 4; index < text.Length; index++)
                 {
-                    byte baseByte = (byte) (StringCharToBaseByte(text[index]));
-                    byte shiftedByte = (byte) (baseByte << (2 * (index%4)));
+                    byte baseByte = (byte)(StringCharToBaseByte(text[index]));
+                    byte shiftedByte = (byte)(baseByte << (2 * (index % 4)));
                     finalByte |= shiftedByte;
                 }
-                binaryText[text.Length/4] = finalByte;
+                binaryText[text.Length / 4] = finalByte;
             }
 
             return new DnaSequence(binaryText, text.Length);
@@ -63,7 +53,7 @@
             switch (c)
             {
                 case 'a':
-                case'A':
+                case 'A':
                     return 0;
                 case 'c':
                 case 'C':

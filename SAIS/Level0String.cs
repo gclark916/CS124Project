@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,11 +13,10 @@ namespace CS124Project.SAIS
     {
         private readonly byte[] _text;
         private readonly uint _length;
-        public uint Length { get { return _length; } }
-        public uint[] BucketIndices { get { return Types.BucketIndices; } }
+        public long Length { get { return _length; } }
         public TypeArray Types { get; set; }
 
-        public uint this[uint index]
+        public int this[long index]
         {
             get
             {
@@ -27,7 +27,7 @@ namespace CS124Project.SAIS
                     return 0;
 
                 byte charByte = _text[index / 4];
-                uint unmaskedChar = (uint) ((charByte >> (int)(2 * (index % 4))));
+                int unmaskedChar = ((charByte >> (int)(2 * (index % 4))));
                 var maskedChar = unmaskedChar & 3;
                 return maskedChar + 1; // Add one because sentinel takes value 0 and dnaBases are set to use 0..3
             }
@@ -41,13 +41,13 @@ namespace CS124Project.SAIS
         public Level0String(byte[] text, uint length)
         {
             _text = text;
-            _length = length+1; // Add one for sentinel
+            _length = length + 1; // Add one for sentinel
         }
 
         public Level0String(DnaSequence text)
         {
             _text = text.Bytes;
-            _length = (uint) (text.Length + 1);
+            _length = (uint)(text.Length + 1);
         }
 
         public override string ToString()
@@ -81,7 +81,7 @@ namespace CS124Project.SAIS
 
                 builder.Append(character);
             }
-            
+
             return builder.ToString();
         }
     }

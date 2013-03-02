@@ -83,6 +83,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BWT\BwtAligner.cs" />
+    <Compile Include="BWT\CompressedSuffixArray.cs" />
+    <Compile Include="BWT\DnaBwt.cs" />
+    <Compile Include="BWT\OccurrenceArray.cs" />
     <Compile Include="Genome\DnaSequence.cs" />
     <Compile Include="Genome\Generator.cs" />
     <Compile Include="Genome\DnaBase.cs" />

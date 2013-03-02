@@ -1,10 +1,15 @@
-﻿namespace CS124Project.SAIS
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace CS124Project.SAIS
 {
-    internal interface ISaisString
+    interface ISaisString
     {
-        uint Length { get; }
-        uint[] BucketIndices { get; }
+        long Length { get; }
         TypeArray Types { get; set; }
-        uint this[uint index] { get; }
+        int this[long index] { get; }
     }
 }
