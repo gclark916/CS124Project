@@ -19,7 +19,7 @@ namespace CS124Project
             //string refFile = "test.dna", donorFile = "test_donor.dna", readsFile = "test.reads", baseFile="test";
 
             //Simulator.GenerateDonorGenomeFromReferenceGenome(refFile, donorFile);
-            Simulator.GenerateShortReadsFromDonorGenome(donorFile, readsFile, 15);
+            //Simulator.GenerateShortReadsFromDonorGenome(donorFile, readsFile, 15);
 
             /*var refString = File.ReadAllText(refFile);
             var refGenome = DnaSequence.CreateGenomeFromString(refString);
@@ -29,8 +29,10 @@ namespace CS124Project
             var refGenomeRev = DnaSequence.CreateGenomeFromString(refString);
             BwtAligner.SavePrecomputedDataToFiles(baseFile, refGenome, refGenomeRev);*/
 
+            var aligningStart = DateTime.Now;
             BwtAligner aligner = BwtAligner.CreateBwtAlignerFromFiles(baseFile);
             aligner.AlignReadsAndConstructGenome(readsFile, baseFile+"_output.dna");
+            Console.WriteLine("Took {0} seconds to align reads", DateTime.Now.Subtract(aligningStart).TotalSeconds);
 
             var accuracy = Simulator.ComputeAccuracy(donorFile, baseFile + "_output.dna");
             Console.WriteLine(accuracy);

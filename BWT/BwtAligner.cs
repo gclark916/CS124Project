@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using CS124Project.Genome;
 using CS124Project.SAIS;
 
@@ -68,62 +70,41 @@ namespace CS124Project.BWT
         public void AlignReadsAndConstructGenome(string readsFile, string outFile)
         {
             Dictionary<uint, List<byte[]>> positionsToReads = new Dictionary<uint, List<byte[]>>();
-            Random rng = new Random();
+            
             using (var file = File.OpenRead(readsFile))
             {
                 var reader = new BinaryReader(file);
                 var numReads = file.Length/8;
+                Random[] randoms = new Random[8];
+                ManualResetEvent[] manualResetEvents = new ManualResetEvent[8];
+                for (int i = 0; i < manualResetEvents.Length; i++)
+                {
+                    randoms[i] = new Random();
+                    manualResetEvents[i] = new ManualResetEvent(true);
+                }
+
                 long readsAligned = 0;
                 while (readsAligned < numReads)
                 {
                     readsAligned++;
                     byte[] shortReadBytes = reader.ReadBytes(8);
                     DnaSequence shortRead = new DnaSequence(shortReadBytes, 30);
-                    var alignments = GetAlignments(shortRead, 2).ToArray();
-                    Tuple<uint, uint, int> finalAlignment = null;
-
-                    var noMismatches = alignments.Where(a => a.Item3 == 2).ToArray();
-                    if (noMismatches.Any())
-                    {
-                        var randomIndex = rng.Next(noMismatches.Count());
-                        finalAlignment = noMismatches[randomIndex];
-                    }
-
-                    if (finalAlignment == null)
-                    {
-                        var oneMismatch = alignments.Where(a => a.Item3 == 1).ToArray();
-                        if (oneMismatch.Any())
+                    int mreIndex = WaitHandle.WaitAny(manualResetEvents);
+                    manualResetEvents[mreIndex].Reset();
+                    var parameters = new Tuple<DnaSequence, int, Random, Dictionary<uint, List<byte[]>>, ManualResetEvent>(shortRead, 2, randoms[mreIndex], positionsToReads, manualResetEvents[mreIndex]);
+                    ThreadPool.QueueUserWorkItem(o =>
                         {
-                            var randomIndex = rng.Next(oneMismatch.Count());
-                            finalAlignment = oneMismatch[randomIndex];
-                        }
-
-                        if (finalAlignment == null)
-                        {
-                            var twoMismatches = alignments.Where(a => a.Item3 == 0).ToArray();
-                            if (twoMismatches.Any())
-                            {
-                                var randomIndex = rng.Next(twoMismatches.Count());
-                                finalAlignment = twoMismatches[randomIndex];
-                            }
-                        }
-                    }
-
-                    if (finalAlignment != null)
-                    {
-                        var randomSuffixArrayIndex = finalAlignment.Item1 + rng.Next((int) (finalAlignment.Item2 - finalAlignment.Item1));
-                        var textPos = (uint)SuffixArray[randomSuffixArrayIndex];
-                        List<byte[]> readsAtPosition;
-                        if (positionsToReads.TryGetValue(textPos, out readsAtPosition))
-                            readsAtPosition.Add(shortRead.Bytes);
-                        else
-                        {
-                            readsAtPosition = new List<byte[]>() { shortRead.Bytes };
-                            positionsToReads.Add(textPos, readsAtPosition);
-                        }
-                    }
+                            var p = o as Tuple<DnaSequence, int, Random, Dictionary<uint, List<byte[]>>, ManualResetEvent>;
+                            Debug.Assert(p != null, "p != null");
+                            AddAlignmentsToDictionary(p.Item1, p.Item2, p.Item3, p.Item4);
+                            p.Item5.Set();
+                        }, parameters);
+                    
                 }
+
+                WaitHandle.WaitAll(manualResetEvents);
             }
+
 
             using (var file = File.Open(outFile, FileMode.Create))
             {
@@ -176,11 +157,57 @@ namespace CS124Project.BWT
             }
         }
 
-        public IEnumerable<Tuple<uint, uint, int>> GetAlignments(DnaSequence shortRead, int allowedDifferences)
+        public void AddAlignmentsToDictionary(DnaSequence shortRead, int allowedDifferences, Random rng, Dictionary<uint, List<byte[]>> positionsToReads)
         {
             var minDifferences = CalculateMinimumDifferences(shortRead);
             var maxDiff = allowedDifferences < minDifferences[29] ? allowedDifferences : minDifferences[29];
-            return GetSuffixArrayBounds(shortRead, (int)shortRead.Length - 1, maxDiff, minDifferences, 0, (uint)(SuffixArray.Length - 1));
+            var alignments = GetSuffixArrayBounds(shortRead, (int) shortRead.Length - 1, maxDiff, minDifferences, 0, (uint) (SuffixArray.Length - 1)).ToArray();
+            Tuple<uint, uint, int> finalAlignment = null;
+
+            var noMismatches = alignments.Where(a => a.Item3 == 2).ToArray();
+            if (noMismatches.Any())
+            {
+                var randomIndex = rng.Next(noMismatches.Count());
+                finalAlignment = noMismatches[randomIndex];
+            }
+
+            if (finalAlignment == null)
+            {
+                var oneMismatch = alignments.Where(a => a.Item3 == 1).ToArray();
+                if (oneMismatch.Any())
+                {
+                    var randomIndex = rng.Next(oneMismatch.Count());
+                    finalAlignment = oneMismatch[randomIndex];
+                }
+
+                if (finalAlignment == null)
+                {
+                    var twoMismatches = alignments.Where(a => a.Item3 == 0).ToArray();
+                    if (twoMismatches.Any())
+                    {
+                        var randomIndex = rng.Next(twoMismatches.Count());
+                        finalAlignment = twoMismatches[randomIndex];
+                    }
+                }
+            }
+
+            if (finalAlignment != null)
+            {
+                var randomSuffixArrayIndex = finalAlignment.Item1 +
+                                                rng.Next((int) (finalAlignment.Item2 - finalAlignment.Item1));
+                var textPos = (uint) SuffixArray[randomSuffixArrayIndex];
+                lock (positionsToReads)
+                {
+                    List<byte[]> readsAtPosition;
+                    if (positionsToReads.TryGetValue(textPos, out readsAtPosition))
+                        readsAtPosition.Add(shortRead.Bytes);
+                    else
+                    {
+                        readsAtPosition = new List<byte[]>() {shortRead.Bytes};
+                        positionsToReads.Add(textPos, readsAtPosition);
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -200,8 +227,8 @@ namespace CS124Project.BWT
                 if (minSAIndex == 0)
                     minSAIndex = C[character] + 1;
                 else
-                    minSAIndex = (uint)(C[character] + OccurrencesRev[character][minSAIndex-1]+1);
-                maxSAIndex = (uint)(C[character] + OccurrencesRev[character][maxSAIndex]);
+                    minSAIndex = (uint) (C[character] + OccurrencesRev[character][minSAIndex - 1] + 1);
+                maxSAIndex = (uint) (C[character] + OccurrencesRev[character][maxSAIndex]);
                 if (minSAIndex > maxSAIndex)
                 {
                     minSAIndex = 0;
@@ -214,49 +241,51 @@ namespace CS124Project.BWT
             return minDifferences;
         }
 
-        private IEnumerable<Tuple<uint, uint, int>> GetSuffixArrayBounds(DnaSequence shortRead, int i, int allowedDiff,
+        private IEnumerable<Tuple<uint, uint, int>> GetSuffixArrayBounds(DnaSequence shortRead, int shortReadIndex, int allowedDiff,
                                                                          byte[] minDiffs, uint minIndex,
                                                                          uint maxIndex)
         {
-            if (i < 0)
+            if (shortReadIndex < 0)
                 return new List<Tuple<uint, uint, int>>
                     {
                         new Tuple<uint, uint, int>(minIndex, maxIndex, allowedDiff)
                     };
-            if (allowedDiff < minDiffs[i])
+            if (allowedDiff < minDiffs[shortReadIndex])
                 return new List<Tuple<uint, uint, int>>();
-            
+
 
             List<Tuple<uint, uint, int>> alignments = new List<Tuple<uint, uint, int>>();
             //var deletionAlignments = GetSuffixArrayBounds(shortRead, i - 1, allowedDiff - 1, minDiffs, minSaIndex, maxSaIndex);
             //alignments = alignments.Union(deletionAlignments);
 
             for (uint dnaBase = 0; dnaBase < 4; dnaBase++)
-            //for (int dnaBase = shortRead[i]; dnaBase == shortRead[i]; dnaBase++ )
+                //for (int dnaBase = shortRead[i]; dnaBase == shortRead[i]; dnaBase++ )
             {
                 uint minSaIndex = minIndex;
                 uint maxSaIndex = maxIndex;
                 if (minSaIndex == 0)
                     minSaIndex = C[dnaBase] + 1;
                 else
-                    minSaIndex = (uint)(C[dnaBase] + Occurrences[dnaBase][minSaIndex - 1] + 1);
-                maxSaIndex = (uint)(C[dnaBase] + Occurrences[dnaBase][maxSaIndex]);
+                    minSaIndex = (uint) (C[dnaBase] + Occurrences[dnaBase][minSaIndex - 1] + 1);
+                maxSaIndex = (uint) (C[dnaBase] + Occurrences[dnaBase][maxSaIndex]);
 
                 if (minSaIndex <= maxSaIndex)
                 {
                     //var insertionAlignments = GetSuffixArrayBounds(shortRead, i, allowedDiff - 1, minDiffs, minSaIndex, maxSaIndex);
                     //alignments = alignments.Union(insertionAlignments);
 
-                    if (dnaBase == shortRead[i])
+                    if (dnaBase == shortRead[shortReadIndex])
                     {
-                        var matchedAlignments = GetSuffixArrayBounds(shortRead, i - 1, allowedDiff, minDiffs, minSaIndex, maxSaIndex);
+                        var matchedAlignments = GetSuffixArrayBounds(shortRead, shortReadIndex - 1, allowedDiff, minDiffs, minSaIndex,
+                                                                     maxSaIndex);
                         alignments.AddRange(matchedAlignments);
                     }
                     else
                     {
                         if (allowedDiff > 0)
                         {
-                            var mismatchedAlignments = GetSuffixArrayBounds(shortRead, i - 1, allowedDiff - 1, minDiffs, minSaIndex, maxSaIndex);
+                            var mismatchedAlignments = GetSuffixArrayBounds(shortRead, shortReadIndex - 1, allowedDiff - 1, minDiffs,
+                                                                            minSaIndex, maxSaIndex);
                             alignments.AddRange(mismatchedAlignments);
                         }
                     }
