@@ -36,12 +36,12 @@ namespace CS124Project.BWT
                 if (_bwt[index] < 0)
                     return 0;
 
-                var j = 0;
+                var j = 1;
                 var k = _C[_bwt[index]] + _occ[_bwt[index]][index];
                 while (k%32 != 0)
                 {
                     if (_bwt[k] == -1)
-                        return j + 1;
+                        return j;
                     k = _C[_bwt[k]] + _occ[_bwt[k]][k];
                     j++;
                 }

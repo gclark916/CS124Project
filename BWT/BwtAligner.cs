@@ -69,13 +69,16 @@ namespace CS124Project.BWT
         {
             Dictionary<uint, List<byte[]>> positionsToReads = new Dictionary<uint, List<byte[]>>();
             Random rng = new Random();
-            using (var reader = new StreamReader(readsFile))
+            using (var file = File.OpenRead(readsFile))
             {
-
-                while (!reader.EndOfStream)
+                var reader = new BinaryReader(file);
+                var numReads = file.Length/8;
+                long readsAligned = 0;
+                while (readsAligned < numReads)
                 {
-                    string shortReadString = reader.ReadLine();
-                    DnaSequence shortRead = DnaSequence.CreateGenomeFromString(shortReadString);
+                    readsAligned++;
+                    byte[] shortReadBytes = reader.ReadBytes(8);
+                    DnaSequence shortRead = new DnaSequence(shortReadBytes, 30);
                     var alignments = GetAlignments(shortRead, 2).ToArray();
                     Tuple<uint, uint, int> finalAlignment = null;
 
@@ -175,10 +178,9 @@ namespace CS124Project.BWT
 
         public IEnumerable<Tuple<uint, uint, int>> GetAlignments(DnaSequence shortRead, int allowedDifferences)
         {
-            //var minDifferences = CalculateMinimumDifferences(shortRead);
-            byte[] minDifferences = new byte[30];
-            return GetSuffixArrayBounds(shortRead, (int) shortRead.Length - 1, allowedDifferences, minDifferences, 1,
-                                        (uint) (SuffixArray.Length - 1));
+            var minDifferences = CalculateMinimumDifferences(shortRead);
+            //byte[] minDifferences = new byte[30];
+            return GetSuffixArrayBounds(shortRead, (int) shortRead.Length - 1, allowedDifferences, minDifferences, 0, (uint) (SuffixArray.Length-1));
         }
 
         /// <summary>
@@ -190,16 +192,19 @@ namespace CS124Project.BWT
         {
             byte differences = 0;
             byte[] minDifferences = new byte[shortRead.Length];
-            for (uint readIndex = 0, minSAIndex = 1, maxSAIndex = (uint) (SuffixArrayRev.Length - 1);
+            for (uint readIndex = 0, minSAIndex = 0, maxSAIndex = (uint) (SuffixArrayRev.Length - 1);
                  readIndex < shortRead.Length;
                  readIndex++)
             {
                 var character = shortRead[readIndex];
-                minSAIndex = (uint)(C[character] + OccurrencesRev[character][minSAIndex - 1] + 1);
+                if (minSAIndex == 0)
+                    minSAIndex = C[character] + 1;
+                else
+                    minSAIndex = (uint)(C[character] + OccurrencesRev[character][minSAIndex-1]+1);
                 maxSAIndex = (uint)(C[character] + OccurrencesRev[character][maxSAIndex]);
                 if (minSAIndex > maxSAIndex)
                 {
-                    minSAIndex = 1;
+                    minSAIndex = 0;
                     maxSAIndex = (uint) (SuffixArrayRev.Length - 1);
                     differences++;
                 }
@@ -213,22 +218,27 @@ namespace CS124Project.BWT
                                                                          byte[] minDiffs, uint minSaIndex,
                                                                          uint maxSaIndex)
         {
-            if (allowedDiff < minDiffs[i])
-                return new List<Tuple<uint, uint, int>>();
             if (i < 0)
                 return new List<Tuple<uint, uint, int>>
                     {
                         new Tuple<uint, uint, int>(minSaIndex, maxSaIndex, allowedDiff)
                     };
+            if (allowedDiff < minDiffs[i])
+                return new List<Tuple<uint, uint, int>>();
+            
 
             IEnumerable<Tuple<uint, uint, int>> alignments = new List<Tuple<uint, uint, int>>();
             //var deletionAlignments = GetSuffixArrayBounds(shortRead, i - 1, allowedDiff - 1, minDiffs, minSaIndex, maxSaIndex);
             //alignments = alignments.Union(deletionAlignments);
 
-            for (int dnaBase = 0; dnaBase < 4; dnaBase++)
+            //for (int dnaBase = 0; dnaBase < 4; dnaBase++)
+            for (int dnaBase = shortRead[i]; dnaBase == shortRead[i]; dnaBase++ )
             {
-                minSaIndex = (uint) (C[dnaBase] + Occurrences[dnaBase][minSaIndex - 1] + 1);
-                maxSaIndex = (uint) (C[dnaBase] + Occurrences[dnaBase][maxSaIndex]);
+                if (minSaIndex == 0)
+                    minSaIndex = C[dnaBase] + 1;
+                else
+                    minSaIndex = (uint)(C[dnaBase] + Occurrences[dnaBase][minSaIndex - 1] + 1);
+                maxSaIndex = (uint)(C[dnaBase] + Occurrences[dnaBase][maxSaIndex]);
 
                 if (minSaIndex <= maxSaIndex)
                 {
@@ -237,15 +247,13 @@ namespace CS124Project.BWT
 
                     if (dnaBase == shortRead[i])
                     {
-                        var matchedAlignments = GetSuffixArrayBounds(shortRead, i - 1, allowedDiff, minDiffs, minSaIndex,
-                                                                     maxSaIndex);
+                        var matchedAlignments = GetSuffixArrayBounds(shortRead, i - 1, allowedDiff, minDiffs, minSaIndex, maxSaIndex);
                         alignments = alignments.Union(matchedAlignments);
                     }
                     else
                     {
-                        var mismatchedAlignments = GetSuffixArrayBounds(shortRead, i - 1, allowedDiff - 1, minDiffs,
-                                                                        minSaIndex, maxSaIndex);
-                        alignments = alignments.Union(mismatchedAlignments);
+                        //var mismatchedAlignments = GetSuffixArrayBounds(shortRead, i - 1, allowedDiff - 1, minDiffs, minSaIndex, maxSaIndex);
+                        //alignments = alignments.Union(mismatchedAlignments);
                     }
                 }
             }
@@ -258,7 +266,7 @@ namespace CS124Project.BWT
             using (var file = File.Open(fileName, FileMode.Create))
             {
                 uint[] C = new uint[4];
-                for (int i = 0; i < bwt.Length - 1; i++)
+                for (int i = 0; i < bwt.Length; i++)
                 {
                     if (bwt[i] < 0)
                         continue;

@@ -70,15 +70,9 @@ namespace CS124Project.Genome
             File.WriteAllBytes(donorGenomeFile, genome);
         }
 
-        public static void GenerateShortReadsFromDonorGenome(string donorGenomeFile, string readsFile, double coverage)
+        public static void GenerateShortReadsTextFromDonorGenome(string donorGenomeFile, string readsFile, double coverage)
         {
             Poisson poisson = new Poisson(coverage/ReadLength) {RandomSource = new MersenneTwister()};
-
-            byte[] readSequence = new byte[9];  // reads are only 60 bits, but can get 4 at a time by reading in an extra byte. Reads are bit arrays [0..60], [2..62], [4..64], [6..66]
-            byte[] bitmaskBytes = new byte[8] {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xF};
-            BigInteger bitmask = new BigInteger(bitmaskBytes);
-            BigInteger[] bitmasks = new BigInteger[4] {bitmask, bitmask << 2, bitmask << 4, bitmask << 6};
-
 
             string genome = File.ReadAllText(donorGenomeFile);
             using (var writer = new StreamWriter(File.Open(readsFile, FileMode.Create)))
@@ -95,6 +89,50 @@ namespace CS124Project.Genome
                             writer.Write(read);
                     }
                 }
+            }
+        }
+
+        public static void GenerateShortReadsFromDonorGenome(string donorGenomeFile, string readsFile, double coverage)
+        {
+            Poisson poisson = new Poisson(coverage / ReadLength) { RandomSource = new MersenneTwister() };
+
+            string genome = File.ReadAllText(donorGenomeFile);
+            using (var file = File.Open(readsFile, FileMode.Create))
+            {
+                var writer = new BinaryWriter(file);
+                for (int donorIndex = 0; donorIndex < genome.Length - 29; donorIndex++)
+                {
+                    //var numReadsAtPos = poisson.Sample();
+                    var numReadsAtPos = 2;
+
+                    if (numReadsAtPos > 0)
+                    {
+                        string read = genome.Substring(donorIndex, 30);
+                        DnaSequence dna = DnaSequence.CreateGenomeFromString(read);
+                        for (int i = 0; i < numReadsAtPos; i++)
+                            writer.Write(dna.Bytes);
+                    }
+                }
+            }
+        }
+
+        public static decimal ComputeAccuracy(string donorFile, string constructedFile)
+        {
+            using(var donor = File.OpenRead(donorFile))
+            using (var constructed = File.OpenRead(constructedFile))
+            {
+                var donorReader = new BinaryReader(donor);
+                var constructedReader = new BinaryReader(constructed);
+
+                long totalBases = donor.Length;
+                long differences = 0;
+                for (long i = 0; i < totalBases; i++)
+                {
+                    if (donorReader.ReadByte() != constructedReader.ReadByte())
+                        differences++;
+                }
+
+                return ((decimal)(totalBases - differences))/(decimal)totalBases;
             }
         }
     }

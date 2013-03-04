@@ -15,23 +15,24 @@ namespace CS124Project
     {
         static void Main(string[] args)
         {
-            //string refFile = "chr22.dna", donorFile = "chr22_donor.dna", readsFile = "chr22.reads", baseFile = "chr22";
-            string refFile = "test.dna", donorFile = "test_donor.dna", readsFile = "test.reads", baseFile="test";
-            //Simulator.GenerateDonorGenomeFromReferenceGenome(refFile, donorFile);
-            //Simulator.GenerateShortReadsFromDonorGenome(donorFile, readsFile, 30);
+            string refFile = "chr22.dna", donorFile = "chr22_donor.dna", readsFile = "chr22.reads", baseFile = "chr22";
+            //string refFile = "test.dna", donorFile = "test_donor.dna", readsFile = "test.reads", baseFile="test";
 
-            var refString = File.ReadAllText(refFile);
+            Simulator.GenerateShortReadsFromDonorGenome(refFile, readsFile, 30);
+
+            /*var refString = File.ReadAllText(refFile);
             var refGenome = DnaSequence.CreateGenomeFromString(refString);
             var refCharArray = refString.ToCharArray();
             Array.Reverse(refCharArray);
             refString = new String(refCharArray);
             var refGenomeRev = DnaSequence.CreateGenomeFromString(refString);
-            BwtAligner.SavePrecomputedDataToFiles(baseFile, refGenome, refGenomeRev);
+            BwtAligner.SavePrecomputedDataToFiles(baseFile, refGenome, refGenomeRev);*/
 
             BwtAligner aligner = BwtAligner.CreateBwtAlignerFromFiles(baseFile);
-            aligner.SuffixArray.WriteToTextFile("test_text.csa");
-            aligner.SuffixArrayRev.WriteToTextFile("test_text_rev.csa");
-            aligner.AlignReadsAndConstructGenome(readsFile, "chr22_output.dna");
+            aligner.AlignReadsAndConstructGenome(readsFile, baseFile+"_output.dna");
+
+            var accuracy = Simulator.ComputeAccuracy(refFile, baseFile + "_output.dna");
+            Console.WriteLine(accuracy);
         }
     }
 }
