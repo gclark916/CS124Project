@@ -164,17 +164,19 @@ namespace CS124Project.BWT
             var alignments = GetSuffixArrayBounds(shortRead, (int) shortRead.Length - 1, maxDiff, minDifferences, 0, (uint) (SuffixArray.Length - 1)).ToArray();
             Tuple<uint, uint, int> finalAlignment = null;
 
+            //TODO: fix randomness. shorter spans are favored more than long spans
+
             if (alignments.Any())
             {
-                var randomIndex = rng.Next(alignments.Count());
-                finalAlignment = alignments[randomIndex];
-            }
-
-            if (finalAlignment != null)
-            {
-                var randomSuffixArrayIndex = finalAlignment.Item1 +
-                                                rng.Next((int) (finalAlignment.Item2 - finalAlignment.Item1 + 1));
-                var textPos = (uint) SuffixArray[randomSuffixArrayIndex];
+                var indices = new HashSet<uint>();
+                foreach (var alignment in alignments)
+                {
+                    for (uint saIndex = alignment.Item1; saIndex <= alignment.Item2; saIndex++)
+                        indices.Add(saIndex);
+                }
+                var indicesArray = indices.ToArray();
+                var randomIndex = rng.Next(indicesArray.Count());
+                var textPos = (uint)SuffixArray[indicesArray[randomIndex]];
                 lock (positionsToReads)
                 {
                     List<byte[]> readsAtPosition;

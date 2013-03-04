@@ -23,15 +23,14 @@ namespace CS124Project
             //Simulator.GenerateDonorGenomeFromReferenceGenome(refFile, donorFile);
             //Simulator.GenerateShortReadsFromDonorGenome(donorFile, readsFile, 15);
 
-            var refString = File.ReadAllText(refFile);
+            /*var refString = File.ReadAllText(refFile);
             var refGenome = DnaSequence.CreateGenomeFromString(refString);
             var refCharArray = refString.ToCharArray();
             Array.Reverse(refCharArray);
             refString = new String(refCharArray);
             var refGenomeRev = DnaSequence.CreateGenomeFromString(refString);
-            BwtAligner.SavePrecomputedDataToFiles(baseFile, refGenome, refGenomeRev);
+            BwtAligner.SavePrecomputedDataToFiles(baseFile, refGenome, refGenomeRev);*/
 
-            
             var aligningStart = DateTime.Now;
             BwtAligner aligner = BwtAligner.CreateBwtAlignerFromFiles(baseFile);
             aligner.AlignReadsAndConstructGenome(readsFile, baseFile+"_output.dna");
