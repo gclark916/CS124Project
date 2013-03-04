@@ -179,8 +179,8 @@ namespace CS124Project.BWT
         public IEnumerable<Tuple<uint, uint, int>> GetAlignments(DnaSequence shortRead, int allowedDifferences)
         {
             var minDifferences = CalculateMinimumDifferences(shortRead);
-            //byte[] minDifferences = new byte[30];
-            return GetSuffixArrayBounds(shortRead, (int) shortRead.Length - 1, allowedDifferences, minDifferences, 0, (uint) (SuffixArray.Length-1));
+            var maxDiff = allowedDifferences < minDifferences[29] ? allowedDifferences : minDifferences[29];
+            return GetSuffixArrayBounds(shortRead, (int)shortRead.Length - 1, maxDiff, minDifferences, 0, (uint)(SuffixArray.Length - 1));
         }
 
         /// <summary>
@@ -215,25 +215,27 @@ namespace CS124Project.BWT
         }
 
         private IEnumerable<Tuple<uint, uint, int>> GetSuffixArrayBounds(DnaSequence shortRead, int i, int allowedDiff,
-                                                                         byte[] minDiffs, uint minSaIndex,
-                                                                         uint maxSaIndex)
+                                                                         byte[] minDiffs, uint minIndex,
+                                                                         uint maxIndex)
         {
             if (i < 0)
                 return new List<Tuple<uint, uint, int>>
                     {
-                        new Tuple<uint, uint, int>(minSaIndex, maxSaIndex, allowedDiff)
+                        new Tuple<uint, uint, int>(minIndex, maxIndex, allowedDiff)
                     };
             if (allowedDiff < minDiffs[i])
                 return new List<Tuple<uint, uint, int>>();
             
 
-            IEnumerable<Tuple<uint, uint, int>> alignments = new List<Tuple<uint, uint, int>>();
+            List<Tuple<uint, uint, int>> alignments = new List<Tuple<uint, uint, int>>();
             //var deletionAlignments = GetSuffixArrayBounds(shortRead, i - 1, allowedDiff - 1, minDiffs, minSaIndex, maxSaIndex);
             //alignments = alignments.Union(deletionAlignments);
 
-            //for (int dnaBase = 0; dnaBase < 4; dnaBase++)
-            for (int dnaBase = shortRead[i]; dnaBase == shortRead[i]; dnaBase++ )
+            for (uint dnaBase = 0; dnaBase < 4; dnaBase++)
+            //for (int dnaBase = shortRead[i]; dnaBase == shortRead[i]; dnaBase++ )
             {
+                uint minSaIndex = minIndex;
+                uint maxSaIndex = maxIndex;
                 if (minSaIndex == 0)
                     minSaIndex = C[dnaBase] + 1;
                 else
@@ -248,12 +250,15 @@ namespace CS124Project.BWT
                     if (dnaBase == shortRead[i])
                     {
                         var matchedAlignments = GetSuffixArrayBounds(shortRead, i - 1, allowedDiff, minDiffs, minSaIndex, maxSaIndex);
-                        alignments = alignments.Union(matchedAlignments);
+                        alignments.AddRange(matchedAlignments);
                     }
                     else
                     {
-                        //var mismatchedAlignments = GetSuffixArrayBounds(shortRead, i - 1, allowedDiff - 1, minDiffs, minSaIndex, maxSaIndex);
-                        //alignments = alignments.Union(mismatchedAlignments);
+                        if (allowedDiff > 0)
+                        {
+                            var mismatchedAlignments = GetSuffixArrayBounds(shortRead, i - 1, allowedDiff - 1, minDiffs, minSaIndex, maxSaIndex);
+                            alignments.AddRange(mismatchedAlignments);
+                        }
                     }
                 }
             }

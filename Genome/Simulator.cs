@@ -102,8 +102,7 @@ namespace CS124Project.Genome
                 var writer = new BinaryWriter(file);
                 for (int donorIndex = 0; donorIndex < genome.Length - 29; donorIndex++)
                 {
-                    //var numReadsAtPos = poisson.Sample();
-                    var numReadsAtPos = 2;
+                    var numReadsAtPos = poisson.Sample();
 
                     if (numReadsAtPos > 0)
                     {
