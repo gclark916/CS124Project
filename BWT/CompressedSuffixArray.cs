@@ -9,6 +9,7 @@ namespace CS124Project.BWT
 {
     class CompressedSuffixArray
     {
+        private const int CompressionFactor = 32;
         private readonly uint[] _compressedSufArray;
         private readonly DnaBwt _bwt;
         private readonly OccurrenceArray[] _occ;
@@ -30,15 +31,15 @@ namespace CS124Project.BWT
                 if (index < 0 || index >= Length)
                     throw new IndexOutOfRangeException();
 
-                if (index%32 == 0)
-                    return _compressedSufArray[index/32];
+                if (index % CompressionFactor == 0)
+                    return _compressedSufArray[index / CompressionFactor];
 
                 if (_bwt[index] < 0)
                     return 0;
 
                 var j = 1;
                 var k = _C[_bwt[index]] + _occ[_bwt[index]][index];
-                while (k%32 != 0)
+                while (k % CompressionFactor != 0)
                 {
                     if (_bwt[k] == -1)
                         return j;
@@ -46,7 +47,7 @@ namespace CS124Project.BWT
                     j++;
                 }
 
-                return _compressedSufArray[k/32] + j;
+                return _compressedSufArray[k / CompressionFactor] + j;
             }
         }
 

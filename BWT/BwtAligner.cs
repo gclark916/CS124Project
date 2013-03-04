@@ -160,41 +160,20 @@ namespace CS124Project.BWT
         public void AddAlignmentsToDictionary(DnaSequence shortRead, int allowedDifferences, Random rng, Dictionary<uint, List<byte[]>> positionsToReads)
         {
             var minDifferences = CalculateMinimumDifferences(shortRead);
-            var maxDiff = allowedDifferences < minDifferences[29] ? allowedDifferences : minDifferences[29];
+            var maxDiff = allowedDifferences < minDifferences[minDifferences.Length - 1] ? allowedDifferences : minDifferences[minDifferences.Length - 1];
             var alignments = GetSuffixArrayBounds(shortRead, (int) shortRead.Length - 1, maxDiff, minDifferences, 0, (uint) (SuffixArray.Length - 1)).ToArray();
             Tuple<uint, uint, int> finalAlignment = null;
 
-            var noMismatches = alignments.Where(a => a.Item3 == 2).ToArray();
-            if (noMismatches.Any())
+            if (alignments.Any())
             {
-                var randomIndex = rng.Next(noMismatches.Count());
-                finalAlignment = noMismatches[randomIndex];
-            }
-
-            if (finalAlignment == null)
-            {
-                var oneMismatch = alignments.Where(a => a.Item3 == 1).ToArray();
-                if (oneMismatch.Any())
-                {
-                    var randomIndex = rng.Next(oneMismatch.Count());
-                    finalAlignment = oneMismatch[randomIndex];
-                }
-
-                if (finalAlignment == null)
-                {
-                    var twoMismatches = alignments.Where(a => a.Item3 == 0).ToArray();
-                    if (twoMismatches.Any())
-                    {
-                        var randomIndex = rng.Next(twoMismatches.Count());
-                        finalAlignment = twoMismatches[randomIndex];
-                    }
-                }
+                var randomIndex = rng.Next(alignments.Count());
+                finalAlignment = alignments[randomIndex];
             }
 
             if (finalAlignment != null)
             {
                 var randomSuffixArrayIndex = finalAlignment.Item1 +
-                                                rng.Next((int) (finalAlignment.Item2 - finalAlignment.Item1));
+                                                rng.Next((int) (finalAlignment.Item2 - finalAlignment.Item1 + 1));
                 var textPos = (uint) SuffixArray[randomSuffixArrayIndex];
                 lock (positionsToReads)
                 {

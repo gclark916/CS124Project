@@ -79,8 +79,7 @@ namespace CS124Project.Genome
             {
                 for (int donorIndex = 0; donorIndex < genome.Length-29; donorIndex++)
                 {
-                    //var numReadsAtPos = poisson.Sample();
-                    var numReadsAtPos = 1;
+                    var numReadsAtPos = poisson.Sample();
 
                     if (numReadsAtPos > 0)
                     {
