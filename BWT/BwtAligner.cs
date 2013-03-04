@@ -2,31 +2,41 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using CS124Project.Genome;
 using CS124Project.SAIS;
 
 namespace CS124Project.BWT
 {
-    class BwtAligner
+    internal class BwtAligner
     {
         private uint[] C;
+
+        public BwtAligner(uint[] C, OccurrenceArray[] occurrences, OccurrenceArray[] occurrencesRev,
+                          CompressedSuffixArray suffixArray, CompressedSuffixArray suffixArrayRev)
+        {
+            this.C = C;
+            Occurrences = occurrences;
+            OccurrencesRev = occurrencesRev;
+            SuffixArray = suffixArray;
+            SuffixArrayRev = suffixArrayRev;
+        }
+
         private OccurrenceArray[] Occurrences { get; set; }
         private OccurrenceArray[] OccurrencesRev { get; set; }
-        private CompressedSuffixArray SuffixArray { get; set; }
-        private CompressedSuffixArray SuffixArrayRev { get; set; }
+        public CompressedSuffixArray SuffixArray { get; set; }
+        public CompressedSuffixArray SuffixArrayRev { get; set; }
 
-        public static void SavePrecomputedDateToFiles(string baseFileName, DnaSequence referenceGenome, DnaSequence reverseGenome)
+        public static void SavePrecomputedDataToFiles(string baseFileName, DnaSequence referenceGenome,
+                                                      DnaSequence reverseGenome)
         {
             Level0String level0String = new Level0String(referenceGenome);
             SuffixArray suffixArray = SAIS.SuffixArray.CreateSuffixArray(level0String);
             DnaBwt bwt = new DnaBwt(level0String, suffixArray);
             OccurrenceArray[] occs = OccurrenceArray.CreateOccurrenceArrays(bwt);
-            
-            suffixArray.WriteToFile(baseFileName+".csa", 32);
-            bwt.WriteToFile(baseFileName+".bwt");
-            WriteCToFile(baseFileName+".c", bwt);
+
+            suffixArray.WriteToFile(baseFileName + ".csa", 32);
+            bwt.WriteToFile(baseFileName + ".bwt");
+            WriteCToFile(baseFileName + ".c", bwt);
             OccurrenceArray.WriteToFile(baseFileName + ".occ", occs);
 
             level0String = new Level0String(reverseGenome);
@@ -48,45 +58,149 @@ namespace CS124Project.BWT
 
             DnaBwt bwtRev = DnaBwt.ReadFromFile(baseFileName + "_rev.bwt");
             OccurrenceArray[] occRev = OccurrenceArray.CreateFromFile(baseFileName + "_rev.occ", bwtRev);
-            CompressedSuffixArray csaRev = CompressedSuffixArray.CreateFromFile(baseFileName + "_rev.csa", bwtRev, occRev, C);
+            CompressedSuffixArray csaRev = CompressedSuffixArray.CreateFromFile(baseFileName + "_rev.csa", bwtRev,
+                                                                                occRev, C);
 
             BwtAligner aligner = new BwtAligner(C, occ, occRev, csa, csaRev);
             return aligner;
         }
 
-        public BwtAligner(uint[] C, OccurrenceArray[] occurrences, OccurrenceArray[] occurrencesRev,
-                          CompressedSuffixArray suffixArray, CompressedSuffixArray suffixArrayRev)
+        public void AlignReadsAndConstructGenome(string readsFile, string outFile)
         {
-            this.C = C;
-            Occurrences = occurrences;
-            OccurrencesRev = occurrencesRev;
-            SuffixArray = suffixArray;
-            SuffixArrayRev = suffixArrayRev;
+            Dictionary<uint, List<byte[]>> positionsToReads = new Dictionary<uint, List<byte[]>>();
+            Random rng = new Random();
+            using (var reader = new StreamReader(readsFile))
+            {
+
+                while (!reader.EndOfStream)
+                {
+                    string shortReadString = reader.ReadLine();
+                    DnaSequence shortRead = DnaSequence.CreateGenomeFromString(shortReadString);
+                    var alignments = GetAlignments(shortRead, 2).ToArray();
+                    Tuple<uint, uint, int> finalAlignment = null;
+
+                    var noMismatches = alignments.Where(a => a.Item3 == 2).ToArray();
+                    if (noMismatches.Any())
+                    {
+                        var randomIndex = rng.Next(noMismatches.Count());
+                        finalAlignment = noMismatches[randomIndex];
+                    }
+
+                    if (finalAlignment == null)
+                    {
+                        var oneMismatch = alignments.Where(a => a.Item3 == 1).ToArray();
+                        if (oneMismatch.Any())
+                        {
+                            var randomIndex = rng.Next(oneMismatch.Count());
+                            finalAlignment = oneMismatch[randomIndex];
+                        }
+
+                        if (finalAlignment == null)
+                        {
+                            var twoMismatches = alignments.Where(a => a.Item3 == 0).ToArray();
+                            if (twoMismatches.Any())
+                            {
+                                var randomIndex = rng.Next(twoMismatches.Count());
+                                finalAlignment = twoMismatches[randomIndex];
+                            }
+                        }
+                    }
+
+                    if (finalAlignment != null)
+                    {
+                        var randomSuffixArrayIndex = finalAlignment.Item1 + rng.Next((int) (finalAlignment.Item2 - finalAlignment.Item1));
+                        var textPos = (uint)SuffixArray[randomSuffixArrayIndex];
+                        List<byte[]> readsAtPosition;
+                        if (positionsToReads.TryGetValue(textPos, out readsAtPosition))
+                            readsAtPosition.Add(shortRead.Bytes);
+                        else
+                        {
+                            readsAtPosition = new List<byte[]>() { shortRead.Bytes };
+                            positionsToReads.Add(textPos, readsAtPosition);
+                        }
+                    }
+                }
+            }
+
+            using (var file = File.Open(outFile, FileMode.Create))
+            {
+                for (long textIndex = 0; textIndex < SuffixArray.Length - 1; textIndex++)
+                {
+                    int[] characterCounts = new int[4];
+                    for (long i = textIndex; i > textIndex - 30 && i >= 0; i--)
+                    {
+                        List<byte[]> readsAtPos;
+                        positionsToReads.TryGetValue((uint) i, out readsAtPos);
+                        if (readsAtPos == null) continue;
+
+                        foreach (var shortRead in readsAtPos)
+                        {
+                            DnaSequence sequence = new DnaSequence(shortRead, 30);
+                            var character = sequence[textIndex - i];
+                            characterCounts[character]++;
+                        }
+                    }
+
+                    var finalCharacter = 'N';
+                    var maxCount = 0;
+                    var maxIndex = -1;
+                    for (int i = 0; i < 4; i++)
+                    {
+                        if (characterCounts[i] > maxCount)
+                        {
+                            maxCount = characterCounts[i];
+                            maxIndex = i;
+                        }
+                    }
+                    switch (maxIndex)
+                    {
+                        case 0:
+                            finalCharacter = 'A';
+                            break;
+                        case 1:
+                            finalCharacter = 'C';
+                            break;
+                        case 2:
+                            finalCharacter = 'G';
+                            break;
+                        case 3:
+                            finalCharacter = 'T';
+                            break;
+                    }
+
+                    file.Write(BitConverter.GetBytes(finalCharacter), 0, 1);
+                }
+            }
         }
 
-        public IEnumerable<Tuple<uint, uint>> GetAlignments(DnaSequence shortRead, int allowedDifferences)
+        public IEnumerable<Tuple<uint, uint, int>> GetAlignments(DnaSequence shortRead, int allowedDifferences)
         {
-            var minDifferences = CalculateMinimumDifferences(shortRead);
-            return GetSuffixArrayBounds(shortRead, (int)shortRead.Length - 1, allowedDifferences, minDifferences, 1, SuffixArray.Length - 1);
+            //var minDifferences = CalculateMinimumDifferences(shortRead);
+            byte[] minDifferences = new byte[30];
+            return GetSuffixArrayBounds(shortRead, (int) shortRead.Length - 1, allowedDifferences, minDifferences, 1,
+                                        (uint) (SuffixArray.Length - 1));
         }
 
         /// <summary>
-        /// Calculates the lower bound of the number of differences needed to align shortRead[0..i]
+        ///     Calculates the lower bound of the number of differences needed to align shortRead[0..i]
         /// </summary>
         /// <param name="?"></param>
         /// <param name="shortRead"></param>
-        byte[] CalculateMinimumDifferences(DnaSequence shortRead)
+        private byte[] CalculateMinimumDifferences(DnaSequence shortRead)
         {
             byte differences = 0;
             byte[] minDifferences = new byte[shortRead.Length];
-            for (uint readIndex = 0, minSAIndex = 1, maxSAIndex = SuffixArrayRev.Length-1; readIndex < shortRead.Length - 1; readIndex++)
+            for (uint readIndex = 0, minSAIndex = 1, maxSAIndex = (uint) (SuffixArrayRev.Length - 1);
+                 readIndex < shortRead.Length;
+                 readIndex++)
             {
-                minSAIndex = (uint) (C[shortRead[readIndex]] + OccurrencesRev[shortRead[readIndex]][minSAIndex - 1] + 1);
-                maxSAIndex = (uint) (C[shortRead[readIndex]] + OccurrencesRev[shortRead[readIndex]][maxSAIndex]);
+                var character = shortRead[readIndex];
+                minSAIndex = (uint)(C[character] + OccurrencesRev[character][minSAIndex - 1] + 1);
+                maxSAIndex = (uint)(C[character] + OccurrencesRev[character][maxSAIndex]);
                 if (minSAIndex > maxSAIndex)
                 {
                     minSAIndex = 1;
-                    maxSAIndex = SuffixArrayRev.Length - 1;
+                    maxSAIndex = (uint) (SuffixArrayRev.Length - 1);
                     differences++;
                 }
                 minDifferences[readIndex] = differences;
@@ -95,16 +209,21 @@ namespace CS124Project.BWT
             return minDifferences;
         }
 
-        IEnumerable<Tuple<uint, uint>> GetSuffixArrayBounds(DnaSequence shortRead, int i, int allowedDiff, byte[] minDiffs, uint minSaIndex, uint maxSaIndex)
+        private IEnumerable<Tuple<uint, uint, int>> GetSuffixArrayBounds(DnaSequence shortRead, int i, int allowedDiff,
+                                                                         byte[] minDiffs, uint minSaIndex,
+                                                                         uint maxSaIndex)
         {
             if (allowedDiff < minDiffs[i])
-                return new List<Tuple<uint, uint>>();
+                return new List<Tuple<uint, uint, int>>();
             if (i < 0)
-                return new List<Tuple<uint, uint>>();
+                return new List<Tuple<uint, uint, int>>
+                    {
+                        new Tuple<uint, uint, int>(minSaIndex, maxSaIndex, allowedDiff)
+                    };
 
-            IEnumerable<Tuple<uint, uint>> alignments = new List<Tuple<uint, uint>>();
-            var deletionAlignments = GetSuffixArrayBounds(shortRead, i - 1, allowedDiff - 1, minDiffs, minSaIndex, maxSaIndex);
-            alignments = alignments.Union(deletionAlignments);
+            IEnumerable<Tuple<uint, uint, int>> alignments = new List<Tuple<uint, uint, int>>();
+            //var deletionAlignments = GetSuffixArrayBounds(shortRead, i - 1, allowedDiff - 1, minDiffs, minSaIndex, maxSaIndex);
+            //alignments = alignments.Union(deletionAlignments);
 
             for (int dnaBase = 0; dnaBase < 4; dnaBase++)
             {
@@ -113,17 +232,19 @@ namespace CS124Project.BWT
 
                 if (minSaIndex <= maxSaIndex)
                 {
-                    var insertionAlignments = GetSuffixArrayBounds(shortRead, i, allowedDiff - 1, minDiffs, minSaIndex, maxSaIndex);
-                    alignments = alignments.Union(insertionAlignments);
+                    //var insertionAlignments = GetSuffixArrayBounds(shortRead, i, allowedDiff - 1, minDiffs, minSaIndex, maxSaIndex);
+                    //alignments = alignments.Union(insertionAlignments);
 
                     if (dnaBase == shortRead[i])
                     {
-                        var matchedAlignments = GetSuffixArrayBounds(shortRead, i - 1, allowedDiff, minDiffs, minSaIndex, maxSaIndex);
+                        var matchedAlignments = GetSuffixArrayBounds(shortRead, i - 1, allowedDiff, minDiffs, minSaIndex,
+                                                                     maxSaIndex);
                         alignments = alignments.Union(matchedAlignments);
                     }
                     else
                     {
-                        var mismatchedAlignments = GetSuffixArrayBounds(shortRead, i - 1, allowedDiff - 1, minDiffs, minSaIndex, maxSaIndex);
+                        var mismatchedAlignments = GetSuffixArrayBounds(shortRead, i - 1, allowedDiff - 1, minDiffs,
+                                                                        minSaIndex, maxSaIndex);
                         alignments = alignments.Union(mismatchedAlignments);
                     }
                 }
@@ -150,9 +271,10 @@ namespace CS124Project.BWT
                 C[1] = C[0];
                 C[0] = 0;
 
+                var writer = new BinaryWriter(file);
                 for (int i = 0; i < 4; i++)
                 {
-                    file.Write(BitConverter.GetBytes(C[i]), 0, sizeof(uint));
+                    writer.Write(C[i]);
                 }
             }
         }
@@ -160,14 +282,13 @@ namespace CS124Project.BWT
         public static uint[] ReadCFromFile(string fileName)
         {
             uint[] C = new uint[4];
-            using (var file = File.Open(fileName, FileMode.Create))
+            using (var file = File.OpenRead(fileName))
             {
-                byte[] buffer = new byte[4 * sizeof(uint)];
-                file.Read(buffer, 0, 4 * sizeof(uint));
-                C[0] = BitConverter.ToUInt32(buffer, 0);
-                C[1] = BitConverter.ToUInt32(buffer, sizeof(uint));
-                C[2] = BitConverter.ToUInt32(buffer, 2 * sizeof(uint));
-                C[3] = BitConverter.ToUInt32(buffer, 3 * sizeof(uint));
+                var reader = new BinaryReader(file);
+                C[0] = reader.ReadUInt32();
+                C[1] = reader.ReadUInt32();
+                C[2] = reader.ReadUInt32();
+                C[3] = reader.ReadUInt32();
             }
             return C;
         }

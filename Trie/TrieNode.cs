@@ -22,13 +22,13 @@ namespace CS124Project.Trie
                     continue;
 
                 var childTextIndex = suffixArray[saIndex] - 1;
-                var childValue = genome.GetBase(childTextIndex);
+                var childValue = genome[childTextIndex];
                 var childSaIndex = inverseSA[childTextIndex];
 
-                if (childSaIndex > childMaxs[(int) childValue])
-                    childMaxs[(int) childValue] = childSaIndex;
-                if (childSaIndex < childMins[(int) childValue])
-                    childMins[(int) childValue] = childSaIndex;
+                if (childSaIndex > childMaxs[childValue])
+                    childMaxs[childValue] = childSaIndex;
+                if (childSaIndex < childMins[childValue])
+                    childMins[childValue] = childSaIndex;
             }
 
             TrieNode[] children = null;

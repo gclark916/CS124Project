@@ -1,5 +1,9 @@
-﻿namespace CS124Project.Genome
+﻿using System;
+using System.Text;
+
+namespace CS124Project.Genome
 {
+    [System.Diagnostics.DebuggerDisplay("{DebugString()}")]
     class DnaSequence
     {
         private readonly byte[] _text;
@@ -9,6 +13,9 @@
 
         public DnaSequence(byte[] text, long length)
         {
+            if (text.Length < length/4 + (length%4 != 0 ? 1 : 0))
+                throw new ArgumentException("Byte array must be large enough to hold <length> base pairs");
+
             _text = text;
             _length = length;
         }
@@ -73,11 +80,39 @@
         {
             get
             {
+                if (index < 0 || index >= _length)
+                    throw new IndexOutOfRangeException();
+
                 var byteIndex = index / 4;
-                int shift = (int)(2 * ((index) % 4));
+                int shift = (int)(2 * (index % 4));
                 int baseByte = ((_text[byteIndex] >> shift) & 0x3);
                 return baseByte;
             }
+        }
+
+        public string DebugString()
+        {
+            StringBuilder builder = new StringBuilder();
+            for (int i = 0; i < Length && i < 30; i++)
+            {
+                switch (this[i])
+                {
+                    case 0:
+                        builder.Append('A');
+                        break;
+                    case 1:
+                        builder.Append('C');
+                        break;
+                    case 2:
+                        builder.Append('G');
+                        break;
+                    case 3:
+                        builder.Append('T');
+                        break;
+                }
+            }
+
+            return builder.ToString();
         }
     }
 }

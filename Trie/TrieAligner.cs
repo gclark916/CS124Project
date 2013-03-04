@@ -42,7 +42,7 @@ namespace CS124Project.Trie
             if (root == null)
                 return false;
 
-            var baseToAlign = shortRead.GetBase(index);
+            var baseToAlign = (DnaBase)shortRead[index];
             var child = root.GetChild(baseToAlign);
             if (index == 0)
             {

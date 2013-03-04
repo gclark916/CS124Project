@@ -9,10 +9,10 @@ namespace CS124Project.BWT
 {
     class CompressedSuffixArray
     {
-        private uint[] _compressedSufArray;
-        private DnaBwt _bwt;
-        private OccurrenceArray[] _occ;
-        private uint[] _C;
+        private readonly uint[] _compressedSufArray;
+        private readonly DnaBwt _bwt;
+        private readonly OccurrenceArray[] _occ;
+        private readonly uint[] _C;
 
         public CompressedSuffixArray(uint[] compressedSuffixArray, DnaBwt bwt, OccurrenceArray[] occ, uint[] c)
         {
@@ -20,17 +20,29 @@ namespace CS124Project.BWT
             _bwt = bwt;
             _occ = occ;
             _C = c;
+            Length = bwt.Length;
         }
 
         public long this[long index]
         {
             get 
             { 
+                if (index < 0 || index >= Length)
+                    throw new IndexOutOfRangeException();
+
+                if (index%32 == 0)
+                    return _compressedSufArray[index/32];
+
+                if (_bwt[index] < 0)
+                    return 0;
+
                 var j = 0;
-                var k = _C[(int) _bwt[index]] + _occ[(int) _bwt[index]][index];
+                var k = _C[_bwt[index]] + _occ[_bwt[index]][index];
                 while (k%32 != 0)
                 {
-                    k = _C[(int)_bwt[k]] + _occ[(int)_bwt[k]][k];
+                    if (_bwt[k] == -1)
+                        return j + 1;
+                    k = _C[_bwt[k]] + _occ[_bwt[k]][k];
                     j++;
                 }
 
@@ -38,7 +50,7 @@ namespace CS124Project.BWT
             }
         }
 
-        public uint Length { get; private set; }
+        public long Length { get; private set; }
 
         public static CompressedSuffixArray CreateFromFile(string fileName, DnaBwt bwt, OccurrenceArray[] occ, uint[] C)
         {
@@ -51,6 +63,17 @@ namespace CS124Project.BWT
 
             CompressedSuffixArray csa = new CompressedSuffixArray(compressedSufArray, bwt, occ, C);
             return csa;
+        }
+
+        public void WriteToTextFile(string fileName)
+        {
+            using (var writer = new StreamWriter(fileName))
+            {
+                for (int i = 0; i < Length; i++)
+                {
+                    writer.Write(String.Format("{0}\n", this[i]));
+                }
+            }
         }
     }
 }

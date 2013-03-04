@@ -18,11 +18,17 @@ namespace CS124Project.BWT
 
         public static OccurrenceArray[] CreateOccurrenceArrays(DnaBwt bwt)
         {
-            OccurrenceArray[] occArrays = new OccurrenceArray[4];
+            OccurrenceArray[] occArrays = new OccurrenceArray[4]
+                {
+                    new OccurrenceArray(bwt, 0, new int[bwt.Length/CompressFactor+1]),
+                    new OccurrenceArray(bwt, 1, new int[bwt.Length/CompressFactor+1]),
+                    new OccurrenceArray(bwt, 2, new int[bwt.Length/CompressFactor+1]),
+                    new OccurrenceArray(bwt, 3, new int[bwt.Length/CompressFactor+1])
+                };
             int[] sums = new int[4];
             for (int i = 0; i < bwt.Length; i++)
             {
-                if (bwt[i] > 0)
+                if (bwt[i] >= 0)
                     sums[bwt[i]]++;
 
                 if (i%CompressFactor == 0)
@@ -50,7 +56,7 @@ namespace CS124Project.BWT
             {
                 var compressedIndex = index / CompressFactor;
                 var occurrences = _compressedOcc[compressedIndex];
-                for (var i = compressedIndex * CompressFactor; i < compressedIndex * CompressFactor + index % CompressFactor; i++)
+                for (var i = compressedIndex * CompressFactor+1; i <= compressedIndex * CompressFactor + index % CompressFactor; i++)
                 {
                     if (_bwt[i] == _dnaBase)
                         occurrences++;
@@ -68,12 +74,13 @@ namespace CS124Project.BWT
         {
             using (var file = File.Open(fileName, FileMode.Create))
             {
+                BinaryWriter writer = new BinaryWriter(file);
                 for (int i = 0; i < occ[0]._compressedOcc.Length; i++)
                 {
                     for (int dnaBase = 0; dnaBase < 4; dnaBase++)
                     {
-                        var buffer = BitConverter.GetBytes(occ[dnaBase][i]);
-                        file.Write(buffer, 0, sizeof(uint));
+                        var value = occ[dnaBase]._compressedOcc[i];
+                        writer.Write(value);
                     }
                 }
             }
@@ -83,16 +90,21 @@ namespace CS124Project.BWT
         {
             using (var file = File.OpenRead(fileName))
             {
+                BinaryReader reader = new BinaryReader(file);
                 int[][] compressedOccs = new int[4][]
-                    {new int[bwt.Length], new int[bwt.Length], new int[bwt.Length], new int[bwt.Length]};
+                    {
+                        new int[bwt.Length/CompressFactor+1], 
+                        new int[bwt.Length/CompressFactor+1], 
+                        new int[bwt.Length/CompressFactor+1], 
+                        new int[bwt.Length/CompressFactor+1]
+                    };
 
-                var buffer = new byte[sizeof (uint)];
                 for (int i = 0; i < compressedOccs[0].Length; i++)
                 {
                     for (int dnaBase = 0; dnaBase < 4; dnaBase++)
                     {
-                        file.Read(buffer, 0, sizeof (uint));
-                        compressedOccs[dnaBase][i] = BitConverter.ToInt32(buffer, 0);
+                        var value = reader.ReadInt32();
+                        compressedOccs[dnaBase][i] = value;
                     }
                 }
 

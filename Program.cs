@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CS124Project.BWT;
 using CS124Project.Genome;
 using CS124Project.SAIS;
 using CS124Project.Trie;
@@ -14,58 +15,23 @@ namespace CS124Project
     {
         static void Main(string[] args)
         {
-            /*const string genomeFilePath = "genome.bin";
-            const string shortreadsFilePath = "reads.bin";
-            Generator randomGenerator = new Generator();
-            Reader shortReadReader = new Reader();
-            randomGenerator.GenerateRandomGenome(genomeFilePath);
-            shortReadReader.GenerateReads(genomeFilePath, shortreadsFilePath, 0.1, 4, 1.0);*/
+            //string refFile = "chr22.dna", donorFile = "chr22_donor.dna", readsFile = "chr22.reads", baseFile = "chr22";
+            string refFile = "test.dna", donorFile = "test_donor.dna", readsFile = "test.reads", baseFile="test";
+            //Simulator.GenerateDonorGenomeFromReferenceGenome(refFile, donorFile);
+            //Simulator.GenerateShortReadsFromDonorGenome(donorFile, readsFile, 30);
 
-            string testString = File.ReadAllText("small.dna");
-            //const string testString = "ccaattaattaaggaa";
-            DnaSequence genome = DnaSequence.CreateGenomeFromString(testString);
-            ISaisString text = new Level0String(genome);
-            Level0MemorySuffixArray suffixArray = new Level0MemorySuffixArray(text);
+            var refString = File.ReadAllText(refFile);
+            var refGenome = DnaSequence.CreateGenomeFromString(refString);
+            var refCharArray = refString.ToCharArray();
+            Array.Reverse(refCharArray);
+            refString = new String(refCharArray);
+            var refGenomeRev = DnaSequence.CreateGenomeFromString(refString);
+            BwtAligner.SavePrecomputedDataToFiles(baseFile, refGenome, refGenomeRev);
 
-            using (var output = File.Open("bwt.bwt", FileMode.Create))
-            {
-                for (uint i = 0; i < suffixArray.Length; i++)
-                {
-                    var textIndex = suffixArray[i] - 1 != uint.MaxValue ? suffixArray[i] - 1 : text.Length - 1;
-                    var character = text[textIndex];
-                    switch (character)
-                    {
-                        case 1:
-                            output.Write(BitConverter.GetBytes('A'), 0, 1);
-                            break;
-                        case 2:
-                            output.Write(BitConverter.GetBytes('C'), 0, 1);
-                            break;
-                        case 3:
-                            output.Write(BitConverter.GetBytes('G'), 0, 1);
-                            break;
-                        case 4:
-                            output.Write(BitConverter.GetBytes('T'), 0, 1);
-                            break;
-                    }
-                }
-            }
-
-            //suffixArray.WriteToFile("output.sa");
-            /*string testString = "aggagc";
-            uint[] suffixArray = new uint[] {6, 3, 0, 5, 2, 4, 1};
-            uint[] inverseSA = new uint[suffixArray.Length];
-            for (uint i = 0; i < suffixArray.Length; i++)
-                inverseSA[suffixArray[i]] = i;
-            GenomeText genome = GenomeText.CreateGenomeFromString(testString);
-            TrieNode root = new TrieNode(0, testString.Length, suffixArray, inverseSA, genome);
-            TrieAligner aligner = new TrieAligner(root, suffixArray, genome);
-            var alignments = aligner.GetAlignments(GenomeText.CreateGenomeFromString("g")); 
-
-            foreach (var alignment in alignments)
-            {
-                Console.WriteLine("{0} {1}", alignment, testString.Substring((int) alignment));
-            }*/
+            BwtAligner aligner = BwtAligner.CreateBwtAlignerFromFiles(baseFile);
+            aligner.SuffixArray.WriteToTextFile("test_text.csa");
+            aligner.SuffixArrayRev.WriteToTextFile("test_text_rev.csa");
+            aligner.AlignReadsAndConstructGenome(readsFile, "chr22_output.dna");
         }
     }
 }
