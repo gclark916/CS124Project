@@ -114,5 +114,11 @@ namespace CS124Project.Genome
 
             return builder.ToString();
         }
+
+        public static int ByteArrayLength(int readLength)
+        {
+            var arrayLength = readLength/4 + (readLength%4 == 0 ? 0 : 1);
+            return arrayLength;
+        }
     }
 }

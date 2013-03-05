@@ -14,7 +14,7 @@ namespace CS124Project.Genome
     class Simulator
     {
         private const double SnpDensity = 1.0/1000.0;
-        private const int ReadLength = 30;
+        public static int ReadLength = 30;
 
         public static void GenerateReferenceGenomeTextFile(string infile, string outfile)
         {
@@ -77,13 +77,13 @@ namespace CS124Project.Genome
             string genome = File.ReadAllText(donorGenomeFile);
             using (var writer = new StreamWriter(File.Open(readsFile, FileMode.Create)))
             {
-                for (int donorIndex = 0; donorIndex < genome.Length-29; donorIndex++)
+                for (int donorIndex = 0; donorIndex <= genome.Length-ReadLength; donorIndex++)
                 {
                     var numReadsAtPos = poisson.Sample();
 
                     if (numReadsAtPos > 0)
                     {
-                        string read = genome.Substring(donorIndex, 30) + '\n';
+                        string read = genome.Substring(donorIndex, ReadLength) + '\n';
                         for (int i = 0; i < numReadsAtPos; i++)
                             writer.Write(read);
                     }
@@ -99,13 +99,13 @@ namespace CS124Project.Genome
             using (var file = File.Open(readsFile, FileMode.Create))
             {
                 var writer = new BinaryWriter(file);
-                for (int donorIndex = 0; donorIndex < genome.Length - 29; donorIndex++)
+                for (int donorIndex = 0; donorIndex <= genome.Length - ReadLength; donorIndex++)
                 {
                     var numReadsAtPos = poisson.Sample();
 
                     if (numReadsAtPos > 0)
                     {
-                        string read = genome.Substring(donorIndex, 30);
+                        string read = genome.Substring(donorIndex, ReadLength);
                         DnaSequence dna = DnaSequence.CreateGenomeFromString(read);
                         for (int i = 0; i < numReadsAtPos; i++)
                             writer.Write(dna.Bytes);
