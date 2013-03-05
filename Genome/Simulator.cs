@@ -19,55 +19,88 @@ namespace CS124Project.Genome
         public static void GenerateReferenceGenomeTextFile(string infile, string outfile)
         {
             var rng = new Random();
-            byte[] genome = File.ReadAllBytes(infile);
-            for (int i = 0; i < genome.Length; i++ )
+            using (var nFile = File.OpenRead(infile))
+            using (var refFile = File.Open(outfile, FileMode.Create))
             {
-                if (genome[i] == 'N')
+                var reader = new BinaryReader(nFile);
+                var writer = new BinaryWriter(refFile);
+                long length = nFile.Length;
+                for (long i = 0; i < length; i++)
                 {
-                    var randomNumber = rng.NextDouble();
-                    if (randomNumber < .25)
+                    var character = reader.ReadChar();
+                    switch (character)
                     {
-                        genome[i] = BitConverter.GetBytes('A')[0];
-                        continue;
+                        case 'N':
+                            var randomNumber = rng.NextDouble();
+                            if (randomNumber < .25)
+                            {
+                                writer.Write('A');
+                                break;
+                            }
+                            if (randomNumber < .5)
+                            {
+                                writer.Write('C');
+                                break;
+                            }
+                            if (randomNumber < .75)
+                            {
+                                writer.Write('G');
+                                break;
+                            }
+                            writer.Write('T');
+                            break;
+                        case 'A':
+                        case 'a':
+                            writer.Write('A');
+                            break;
+                        case 'C':
+                        case 'c':
+                            writer.Write('C');
+                            break;
+                        case 'G':
+                        case 'g':
+                            writer.Write('G');
+                            break;
+                        case 'T':
+                        case 't':
+                            writer.Write('T');
+                            break;
                     }
-                    if (randomNumber < .5)
-                    {
-                        genome[i] = BitConverter.GetBytes('C')[0];
-                        continue;
-                    }
-                    if (randomNumber < .75)
-                    {
-                        genome[i] = BitConverter.GetBytes('G')[0];
-                        continue;
-                    }
-                    genome[i] = BitConverter.GetBytes('T')[0];
                 }
             }
 
-            File.WriteAllBytes(outfile, genome);
         }
 
         public static void GenerateDonorGenomeFromReferenceGenome(string refGenomeFile, string donorGenomeFile)
         {
             var rng = new Random();
-            byte[] genome = File.ReadAllBytes(refGenomeFile);
-            for (int i = 0; i < genome.Length; i++ )
+            using (var refFile = File.OpenRead(refGenomeFile))
+            using (var donorFile = File.Open(donorGenomeFile, FileMode.Create))
             {
-                var randomNumber = rng.NextDouble();
-                if (randomNumber < SnpDensity)
+                var reader = new BinaryReader(refFile);
+                var writer = new BinaryWriter(donorFile);
+                for (int i = 0; i < refFile.Length; i++)
                 {
-                    if (genome[i] == 'A')
-                        genome[i] = BitConverter.GetBytes('C')[0];
-                    if (genome[i] == 'C')
-                        genome[i] = BitConverter.GetBytes('G')[0];
-                    if (genome[i] == 'G')
-                        genome[i] = BitConverter.GetBytes('T')[0];
-                    if (genome[i] == 'T')
-                        genome[i] = BitConverter.GetBytes('A')[0];
+                    var randomNumber = rng.NextDouble();
+                    if (randomNumber < SnpDensity)
+                    {
+                        var readChar = reader.ReadChar();
+                        if (readChar == 'A')
+                            writer.Write('C');
+                        else if (readChar == 'C')
+                            writer.Write('G');
+                        else if (readChar == 'G')
+                            writer.Write('T');
+                        else if (readChar == 'T')
+                            writer.Write('A');
+                        else throw new Exception();
+                    }
+                    else
+                    {
+                        writer.Write(reader.ReadChar());
+                    }
                 }
             }
-
-            File.WriteAllBytes(donorGenomeFile, genome);
         }
 
         public static void GenerateShortReadsTextFromDonorGenome(string donorGenomeFile, string readsFile, double coverage)
@@ -95,17 +128,20 @@ namespace CS124Project.Genome
         {
             Poisson poisson = new Poisson(coverage / ReadLength) { RandomSource = new MersenneTwister() };
 
-            string genome = File.ReadAllText(donorGenomeFile);
+            using (var donorFile = File.OpenRead(donorGenomeFile))
             using (var file = File.Open(readsFile, FileMode.Create))
             {
                 var writer = new BinaryWriter(file);
-                for (int donorIndex = 0; donorIndex <= genome.Length - ReadLength; donorIndex++)
+                var reader = new BinaryReader(donorFile);
+                for (int donorIndex = 0; donorIndex <= donorFile.Length - ReadLength; donorIndex++)
                 {
                     var numReadsAtPos = poisson.Sample();
 
                     if (numReadsAtPos > 0)
                     {
-                        string read = genome.Substring(donorIndex, ReadLength);
+                        donorFile.Seek(donorIndex, SeekOrigin.Begin);
+                        var chars = reader.ReadChars(ReadLength);
+                        string read = new string(chars);
                         DnaSequence dna = DnaSequence.CreateGenomeFromString(read);
                         for (int i = 0; i < numReadsAtPos; i++)
                             writer.Write(dna.Bytes);

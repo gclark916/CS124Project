@@ -2,3 +2,5 @@
 /obj
 *.suo
 /packages
+x64/*
+x86/*

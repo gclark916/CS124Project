@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Text;
 
 namespace CS124Project.Genome
@@ -88,6 +89,19 @@ namespace CS124Project.Genome
                 int baseByte = ((_text[byteIndex] >> shift) & 0x3);
                 return baseByte;
             }
+            set
+            {
+                if (index < 0 || index >= _length)
+                    throw new IndexOutOfRangeException();
+
+                var byteIndex = index / 4;
+                int shift = (int)(2 * (index % 4));
+                byte baseByte = _text[byteIndex];
+                baseByte &= (byte) ~(3 << shift);
+                var mask = value << shift;
+                baseByte |= (byte)mask;
+                _text[byteIndex] = baseByte;
+            }
         }
 
         public string DebugString()
@@ -119,6 +133,94 @@ namespace CS124Project.Genome
         {
             var arrayLength = readLength/4 + (readLength%4 == 0 ? 0 : 1);
             return arrayLength;
+        }
+
+        public static DnaSequence CreateGenomeFromTextFile(string refFile)
+        {
+            using (var file = File.OpenRead(refFile))
+            {
+                var reader = new BinaryReader(file);
+                long length = file.Length;
+                byte[] binaryText = new byte[length / 4 + (length % 4 == 0 ? 0 : 1)];
+                DnaSequence dna = new DnaSequence(binaryText, length);
+
+                for (uint i = 0; i < length; i++)
+                {
+                    var character = reader.ReadChar();
+                    switch (character)
+                    {
+                        case 'A':
+                            dna[i] = 0;
+                            break;
+                        case 'C':
+                            dna[i] = 1;
+                            break;
+                        case 'G':
+                            dna[i] = 2;
+                            break;
+                        case 'T':
+                            dna[i] = 3;
+                            break;
+                    }
+                }
+
+                return dna;
+            }
+        }
+
+        public static DnaSequence CreateGenomeFromReverseTextFile(string refFile)
+        {
+            using (var file = File.OpenRead(refFile))
+            {
+                var reader = new BinaryReader(file);
+                long length = file.Length;
+                byte[] binaryText = new byte[length / 4 + (length % 4 == 0 ? 0 : 1)];
+                DnaSequence dna = new DnaSequence(binaryText, length);
+
+                for (long i = file.Length-1; i > 0; i--)
+                {
+                    var character = reader.ReadChar();
+                    switch (character)
+                    {
+                        case 'A':
+                            dna[i] = 0;
+                            break;
+                        case 'C':
+                            dna[i] = 1;
+                            break;
+                        case 'G':
+                            dna[i] = 2;
+                            break;
+                        case 'T':
+                            dna[i] = 3;
+                            break;
+                    }
+                }
+
+                return dna;
+            }
+        }
+
+        public void WriteToBinaryFile(string fileName)
+        {
+            using (var file = File.Open(fileName, FileMode.Create))
+            {
+                var writer = new BinaryWriter(file);
+                writer.Write((uint)Length);
+                writer.Write(Bytes);
+            }
+        }
+
+        public static DnaSequence CreateFromBinaryFile(string fileName)
+        {
+            using (var file = File.OpenRead(fileName))
+            {
+                var reader = new BinaryReader(file);
+                uint length = reader.ReadUInt32();
+                byte[] bytes = reader.ReadBytes((int) (file.Length-4));
+
+                return new DnaSequence(bytes, length);
+            }
         }
     }
 }
