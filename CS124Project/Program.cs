@@ -16,19 +16,19 @@ namespace CS124Project
             //Simulator.GenerateReferenceGenomeTextFile("combined_N.dna", refFile);
             //Simulator.GenerateDonorGenomeFromReferenceGenome(refFile, donorFile);
             Simulator.ReadLength = 30;
-            Simulator.GenerateShortReadsFromDonorGenome(donorFile, readsFile, 2.5);
+            //Simulator.GenerateShortReadsFromDonorGenome(donorFile, readsFile, 2);
 
             //var refGenome = DnaSequence.CreateFromBinaryFile(baseFile + ".dna.bin");
-            var refGenome = DnaSequence.CreateGenomeFromTextFile(refFile);
-            refGenome.WriteToBinaryFile(baseFile+".dna.bin");
-            BwtAligner.SavePrecomputedDataToFiles(baseFile, refGenome);
-            var refGenomeRev = DnaSequence.CreateGenomeFromTextFile(refFile);
-            refGenomeRev.WriteToBinaryFile(baseFile+"_rev.dna.bin");
-            BwtAligner.SaveReversePrecomputedDataToFiles(baseFile, refGenomeRev);
+            //var refGenome = DnaSequence.CreateGenomeFromTextFile(refFile);
+            //refGenome.WriteToBinaryFile(baseFile+".dna.bin");
+            //BwtAligner.SavePrecomputedDataToFiles(baseFile, refGenome);
+            //var refGenomeRev = DnaSequence.CreateGenomeFromReverseTextFile(refFile);
+            //refGenomeRev.WriteToBinaryFile(baseFile+"_rev.dna.bin");
+            //BwtAligner.SaveReversePrecomputedDataToFiles(baseFile, refGenomeRev);
 
             var aligningStart = DateTime.Now;
             BwtAligner aligner = BwtAligner.CreateBwtAlignerFromFiles(baseFile, 30);
-            aligner.AlignReadsAndConstructGenome(readsFile, baseFile + "_output.dna", true);
+            aligner.AlignReadsAndConstructGenome(readsFile, baseFile + "_output.dna", false);
             //aligner.ConstructGenome(baseFile+"_output.dna");
             Console.WriteLine("Took {0} seconds to align reads", DateTime.Now.Subtract(aligningStart).TotalSeconds);
 

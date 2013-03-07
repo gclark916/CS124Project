@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -18,22 +19,22 @@ namespace CS124Project.Bwt
         public BwtAligner(uint[] c, OccurrenceArray[] occurrences, OccurrenceArray[] occurrencesRev,
                           CompressedSuffixArray suffixArray, CompressedSuffixArray suffixArrayRev, int readLength)
         {
-            C = c;
-            Occurrences = occurrences;
-            OccurrencesRev = occurrencesRev;
+            _c = c;
+            _occurrences = occurrences;
+            _occurrencesRev = occurrencesRev;
             SuffixArray = suffixArray;
             SuffixArrayRev = suffixArrayRev;
-            ReadLength = readLength;
-            Database = new AlignmentDatabase("temp.db");
+            _readLength = readLength;
+            _database = new AlignmentDatabase("temp.db");
         }
 
-        private uint[] C { get; set; }
-        private int ReadLength { get; set; }
-        private OccurrenceArray[] Occurrences { get; set; }
-        private OccurrenceArray[] OccurrencesRev { get; set; }
+        private readonly uint[] _c;
+        private readonly int _readLength;
+        private readonly OccurrenceArray[] _occurrences;
+        private readonly OccurrenceArray[] _occurrencesRev;
         public CompressedSuffixArray SuffixArray { get; set; }
         public CompressedSuffixArray SuffixArrayRev { get; set; }
-        private AlignmentDatabase Database { get; set; }
+        private readonly AlignmentDatabase _database;
 
         public static void SavePrecomputedDataToFiles(string baseFileName, DnaSequence referenceGenome)
         {
@@ -81,15 +82,16 @@ namespace CS124Project.Bwt
         public void AlignReadsAndConstructGenome(string readsFile, string outFile, bool construct)
         {
             var alignmentStart = DateTime.Now;
+            var threadCount = 12;
 
-            using (var session = Database.SessionFactory.OpenStatelessSession())
+            using (var session = _database.SessionFactory.OpenStatelessSession())
             using (var transaction = session.BeginTransaction())
             using (var file = File.OpenRead(readsFile))
             {
                 var reader = new BinaryReader(file);
-                var numReads = file.Length/DnaSequence.ByteArrayLength(ReadLength);
-                Random[] randoms = new Random[12];
-                var manualResetEvents = new ManualResetEvent[12];
+                var numReads = file.Length/DnaSequence.ByteArrayLength(_readLength);
+                Random[] randoms = new Random[threadCount];
+                var manualResetEvents = new ManualResetEvent[threadCount];
                 for (int i = 0; i < manualResetEvents.Length; i++)
                 {
                     randoms[i] = new Random();
@@ -103,8 +105,8 @@ namespace CS124Project.Bwt
                     {
                         Console.WriteLine(readsAligned);
                     }
-                    byte[] shortReadBytes = reader.ReadBytes(DnaSequence.ByteArrayLength(ReadLength));
-                    DnaSequence shortRead = new DnaSequence(shortReadBytes, ReadLength);
+                    byte[] shortReadBytes = reader.ReadBytes(DnaSequence.ByteArrayLength(_readLength));
+                    DnaSequence shortRead = new DnaSequence(shortReadBytes, _readLength);
                     int mreIndex = WaitHandle.WaitAny(manualResetEvents);
                     manualResetEvents[mreIndex].Reset();
                     var parameters =
@@ -141,7 +143,7 @@ namespace CS124Project.Bwt
 
         public void ConstructGenome(string outFile)
         {
-            using (var session = Database.SessionFactory.OpenStatelessSession())
+            using (var session = _database.SessionFactory.OpenStatelessSession())
             using (var file = File.Open(outFile, FileMode.Create))
             {
                 var writer = new BinaryWriter(file);
@@ -187,7 +189,7 @@ namespace CS124Project.Bwt
                 {
                     lock (positionsToReads)
                     {
-                        positionsToReads.Remove((uint)(textIndex - ReadLength));
+                        positionsToReads.Remove((uint)(textIndex - _readLength));
                     }
 
                     if (textIndex % 50000 == 0)
@@ -195,7 +197,7 @@ namespace CS124Project.Bwt
                         Console.WriteLine(textIndex);
                     }
                     int[] characterCounts = new int[4];
-                    for (uint i = (uint)textIndex; i > textIndex - ReadLength && i > 0; i--)
+                    for (uint i = (uint)textIndex; i > textIndex - _readLength && i > 0; i--)
                     {
                         byte[][] reads;
                         uint i1 = i;
@@ -215,7 +217,7 @@ namespace CS124Project.Bwt
 
                         foreach (var read in reads)
                         {
-                            DnaSequence sequence = new DnaSequence(read, ReadLength);
+                            DnaSequence sequence = new DnaSequence(read, _readLength);
                             var character = sequence[textIndex - i];
                             characterCounts[character]++;
                         }
@@ -259,8 +261,10 @@ namespace CS124Project.Bwt
             var minDifferences = CalculateMinimumDifferences(shortRead);
             if (minDifferences[minDifferences.Length - 1] > allowedDifferences)
                 return;
+            if (minDifferences[minDifferences.Length - 1] == 0)
+                allowedDifferences = 0;
             var sufBounds =
-                GetSuffixArrayBounds(shortRead, (int)shortRead.Length - 1, allowedDifferences, minDifferences, 0,
+                GetSuffixArrayBoundsSansRecursion(shortRead, (int)shortRead.Length - 1, allowedDifferences, minDifferences, 0,
                                      (uint) (SuffixArray.Length - 1)).ToArray();
 
             if (sufBounds.Any())
@@ -297,10 +301,10 @@ namespace CS124Project.Bwt
             {
                 var character = shortRead[readIndex];
                 if (minSAIndex == 0)
-                    minSAIndex = C[character] + 1;
+                    minSAIndex = _c[character] + 1;
                 else
-                    minSAIndex = (uint) (C[character] + OccurrencesRev[character][minSAIndex - 1] + 1);
-                maxSAIndex = (uint) (C[character] + OccurrencesRev[character][maxSAIndex]);
+                    minSAIndex = (uint) (_c[character] + _occurrencesRev[character][minSAIndex - 1] + 1);
+                maxSAIndex = (uint) (_c[character] + _occurrencesRev[character][maxSAIndex]);
                 if (minSAIndex > maxSAIndex)
                 {
                     minSAIndex = 0;
@@ -318,33 +322,24 @@ namespace CS124Project.Bwt
                                                             uint maxIndex)
         {
             if (shortReadIndex < 0)
-                return new List<SufBounds>
-                    {
-                        new SufBounds(minIndex, maxIndex, allowedDiff)
-                    };
+                return new List<SufBounds> { new SufBounds(minIndex, maxIndex, allowedDiff) };
             if (allowedDiff < minDiffs[shortReadIndex])
                 return new List<SufBounds>();
 
             var alignments = new List<SufBounds>();
             var maxAllowedDiff = 0;
-            //var deletionAlignments = GetSuffixArrayBounds(shortRead, i - 1, allowedDiff - 1, minDiffs, minSaIndex, maxSaIndex);
-            //alignments = alignments.Union(deletionAlignments);
-
             for (int dnaBase = shortRead[shortReadIndex], i = 0; i < 4; i++, dnaBase = (shortRead[shortReadIndex]+i)%4)
             {
                 uint minSaIndex = minIndex;
                 uint maxSaIndex = maxIndex;
                 if (minSaIndex == 0)
-                    minSaIndex = C[dnaBase] + 1;
+                    minSaIndex = _c[dnaBase] + 1;
                 else
-                    minSaIndex = (uint) (C[dnaBase] + Occurrences[dnaBase][minSaIndex - 1] + 1);
-                maxSaIndex = (uint) (C[dnaBase] + Occurrences[dnaBase][maxSaIndex]);
+                    minSaIndex = (uint) (_c[dnaBase] + _occurrences[dnaBase][minSaIndex - 1] + 1);
+                maxSaIndex = (uint) (_c[dnaBase] + _occurrences[dnaBase][maxSaIndex]);
 
                 if (minSaIndex <= maxSaIndex)
                 {
-                    //var insertionAlignments = GetSuffixArrayBounds(shortRead, i, allowedDiff - 1, minDiffs, minSaIndex, maxSaIndex);
-                    //alignments = alignments.Union(insertionAlignments);
-
                     if (dnaBase == shortRead[shortReadIndex])
                     {
                         var matchedAlignments = GetSuffixArrayBounds(shortRead, shortReadIndex - 1, allowedDiff,
@@ -369,6 +364,82 @@ namespace CS124Project.Bwt
                                     alignments.Clear();
                                 alignments.AddRange(mismatchedAlignments);
                             }
+                        }
+                    }
+                }
+            }
+
+            return alignments;
+        }
+
+        private List<Tuple<uint, uint>> GetSuffixArrayBoundsSansRecursion(DnaSequence shortRead, int shortReadIndex, int allowedDiff,
+                                                            byte[] minDiffs, uint minIndex,
+                                                            uint maxIndex)
+        {
+            var stack = new Stack<Tuple<int, int, uint, uint>>();
+
+            var curAllowedDiff = allowedDiff;
+            var alignments = new List<Tuple<uint, uint>>();
+
+            for (int dnaBase = 0; dnaBase < 4; dnaBase++)
+            {
+                if (dnaBase == shortRead[shortRead.Length - 1])
+                {
+                    var minSAIndex = _c[dnaBase] + 1;
+                    var maxSAIndex = (uint)(_c[dnaBase] + _occurrences[dnaBase][SuffixArray.Length - 1]);
+                    if (maxSAIndex >= minSAIndex)
+                        stack.Push(new Tuple<int, int, uint, uint>((int) (shortRead.Length-2), allowedDiff, minSAIndex, maxSAIndex));
+                }
+                else
+                {
+                    if (allowedDiff - 1 >= minDiffs[shortRead.Length-1])
+                    {
+                        var minSAIndex = _c[dnaBase] + 1;
+                        var maxSAIndex = (uint)(_c[dnaBase] + _occurrences[dnaBase][SuffixArray.Length - 1]);
+                        if (maxSAIndex >= minSAIndex)
+                            stack.Push(new Tuple<int, int, uint, uint>((int) (shortRead.Length-2), allowedDiff, minSAIndex, maxSAIndex));
+                    }
+                }
+            }
+
+            while (stack.Any())
+            {
+                var tuple = stack.Pop();
+                int readIndex = tuple.Item1;
+                int remainingAllowedDiff = tuple.Item2;
+                uint minSAIndex = tuple.Item3;
+                uint maxSAIndex = tuple.Item4;
+                if (readIndex < 0)
+                {
+                    if (remainingAllowedDiff >= curAllowedDiff)
+                    {
+                        if (remainingAllowedDiff > curAllowedDiff)
+                        {
+                            alignments.Clear();
+                            curAllowedDiff = remainingAllowedDiff;
+                        }
+                        alignments.Add(new Tuple<uint, uint>(minSAIndex, maxSAIndex));
+                    }
+                    continue;
+                }
+
+                for (int dnaBase = 0; dnaBase < 4; dnaBase++)
+                {
+                    if (dnaBase == shortRead[readIndex])
+                    {
+                        var newMinSAIndex = (uint)(_c[dnaBase] + _occurrences[dnaBase][minSAIndex - 1] + 1);
+                        var newMaxSAIndex = (uint)(_c[dnaBase] + _occurrences[dnaBase][maxSAIndex]);
+                        if (newMaxSAIndex >= newMinSAIndex)
+                            stack.Push(new Tuple<int, int, uint, uint>(readIndex-1, remainingAllowedDiff, newMinSAIndex, newMaxSAIndex));
+                    }
+                    else
+                    {
+                        if (remainingAllowedDiff - 1 >= minDiffs[readIndex])
+                        {
+                            var newMinSAIndex = (uint)(_c[dnaBase] + _occurrences[dnaBase][minSAIndex - 1] + 1);
+                            var newMaxSAIndex = (uint)(_c[dnaBase] + _occurrences[dnaBase][maxSAIndex]);
+                            if (newMaxSAIndex >= newMinSAIndex)
+                                stack.Push(new Tuple<int, int, uint, uint>(readIndex - 1, remainingAllowedDiff-1, newMinSAIndex, newMaxSAIndex));
                         }
                     }
                 }
