@@ -1,6 +1,7 @@
-/bin
-/obj
+packages/
 *.suo
-/packages
-x64/*
-x86/*
+CS124Project/App_Readme/
+CS124Project/bin/
+CS124Project/obj/
+CS124Project/x64/
+CS124Project/x86/
