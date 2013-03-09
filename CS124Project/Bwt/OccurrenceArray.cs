@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.IO;
 
 namespace CS124Project.Bwt
@@ -9,6 +10,7 @@ namespace CS124Project.Bwt
         private readonly int[] _compressedOcc;
         private readonly DnaBwt _bwt;
         private readonly int _dnaBase;
+        private readonly long _length;
 
         public static OccurrenceArray[] CreateOccurrenceArrays(DnaBwt bwt)
         {
@@ -41,6 +43,7 @@ namespace CS124Project.Bwt
         {
             _compressedOcc = compressedOccurrences;
             _bwt = bwt;
+            _length = _bwt.Length;
             _dnaBase = dnaBase;
         }
 
@@ -48,6 +51,9 @@ namespace CS124Project.Bwt
         {
             get 
             {
+                //if (index >= _length || index < 0)
+                //    throw new IndexOutOfRangeException();
+
                 var compressedIndex = index / CompressFactor;
                 var occurrences = _compressedOcc[compressedIndex];
                 for (var i = compressedIndex * CompressFactor+1; i <= compressedIndex * CompressFactor + index % CompressFactor; i++)
@@ -59,7 +65,11 @@ namespace CS124Project.Bwt
             }
             private set
             {
-                Debug.Assert(index%CompressFactor == 0);
+                if (index%CompressFactor != 0)
+                    throw new ArgumentException();
+                if (index >= _length || index < 0)
+                    throw new IndexOutOfRangeException();
+
                 _compressedOcc[index/CompressFactor] = value;
             }
         }

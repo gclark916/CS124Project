@@ -177,7 +177,7 @@ namespace CS124Project.Dna
                 byte[] binaryText = new byte[length / 4 + (length % 4 == 0 ? 0 : 1)];
                 DnaSequence dna = new DnaSequence(binaryText, length);
 
-                for (long i = file.Length-1; i > 0; i--)
+                for (long i = file.Length-1; i >= 0; i--)
                 {
                     var character = reader.ReadChar();
                     switch (character)
@@ -221,6 +221,18 @@ namespace CS124Project.Dna
 
                 return new DnaSequence(bytes, length);
             }
+        }
+
+        public static DnaSequence CreateReverseGenomeFromBinaryFile(string forwardBinaryFile)
+        {
+            DnaSequence forward = CreateFromBinaryFile(forwardBinaryFile);
+            DnaSequence reverse = new DnaSequence(new byte[forward.Bytes.Length], forward.Length);
+            for (long i = 0, j = forward.Length - 1; i < reverse.Length; i++, j--)
+            {
+                reverse[i] = forward[j];
+            }
+
+            return reverse;
         }
     }
 }

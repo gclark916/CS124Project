@@ -29,9 +29,10 @@ namespace CS124Project.Sais
         {
             using (var file = File.Open(fileName, FileMode.Create))
             {
+                var writer = new BinaryWriter(file);
                 for (long i = 0; i < Length; i += compressionFactor)
                 {
-                    file.Write(BitConverter.GetBytes((uint)this[i]), 0, sizeof(uint));
+                    writer.Write((uint)this[i]);
                 }
             }
         }

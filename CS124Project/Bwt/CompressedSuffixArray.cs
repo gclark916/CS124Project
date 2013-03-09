@@ -24,8 +24,8 @@ namespace CS124Project.Bwt
         {
             get 
             { 
-                if (index < 0 || index >= Length)
-                    throw new IndexOutOfRangeException();
+                //if (index < 0 || index >= Length)
+                //    throw new IndexOutOfRangeException();
 
                 if (index % CompressionFactor == 0)
                     return _baseArray[index / CompressionFactor];
