@@ -111,6 +111,7 @@ namespace CS124Project.Bwt
                     if (readsAligned%20000 == 0)
                     {
                         Console.WriteLine(readsAligned);
+                        GC.Collect();
                     }
                     byte[] shortReadBytes = reader.ReadBytes(DnaSequence.ByteArrayLength(_readLength));
                     DnaSequence shortRead = new DnaSequence(shortReadBytes, _readLength);
@@ -357,7 +358,7 @@ namespace CS124Project.Bwt
         private List<System.Tuple<uint, uint>> GetSuffixArrayBoundsSansRecursion(DnaSequence shortRead, int allowedDiff,
                                                                                  byte[] minDiffs)
         {
-            var maxHeap = new BinaryHeap<Tuple<int, int, uint, uint>>((x, y) => y.Item2.CompareTo(x.Item2));
+            var maxHeap = new BinaryHeap<Tuple<int, int, uint, uint, int>>((x, y) => y.Item2.CompareTo(x.Item2));
 
             var curAllowedDiff = 0;
             var alignments = new List<System.Tuple<uint, uint>>();
@@ -366,21 +367,19 @@ namespace CS124Project.Bwt
             {
                 if (dnaBase == shortRead[shortRead.Length - 1])
                 {
-                    var minSAIndex = _c[dnaBase] + 1;
-                    var maxSAIndex = (uint) (_c[dnaBase] + _occurrences[dnaBase][_suffixArray.Length - 1]);
-                    if (maxSAIndex >= minSAIndex)
-                        maxHeap.Add(new Tuple<int, int, uint, uint>((int) (shortRead.Length - 2), allowedDiff,
-                                                                    minSAIndex, maxSAIndex));
+                    uint minSAIndex = 0;
+                    var maxSAIndex = (uint)(_suffixArray.Length - 1);
+                    maxHeap.Add(new Tuple<int, int, uint, uint, int>((int)(shortRead.Length - 2), allowedDiff,
+                                                                    minSAIndex, maxSAIndex, dnaBase));
                 }
                 else
                 {
                     if (allowedDiff - 1 >= minDiffs[shortRead.Length - 1])
                     {
-                        var minSAIndex = _c[dnaBase] + 1;
-                        var maxSAIndex = (uint) (_c[dnaBase] + _occurrences[dnaBase][_suffixArray.Length - 1]);
-                        if (maxSAIndex >= minSAIndex)
-                            maxHeap.Add(new Tuple<int, int, uint, uint>((int) (shortRead.Length - 2), allowedDiff - 1,
-                                                                        minSAIndex, maxSAIndex));
+                        uint minSAIndex = 0;
+                        var maxSAIndex = (uint)(_suffixArray.Length - 1);
+                        maxHeap.Add(new Tuple<int, int, uint, uint, int>((int)(shortRead.Length - 2), allowedDiff-1,
+                                                                        minSAIndex, maxSAIndex, dnaBase));
                     }
                 }
             }
@@ -388,23 +387,24 @@ namespace CS124Project.Bwt
             while (maxHeap.Count > 0)
             {
                 var tuple = maxHeap.Remove();
-                int readIndex = tuple.Item1;
                 int remainingAllowedDiff = tuple.Item2;
                 if (remainingAllowedDiff < curAllowedDiff)
+                    break;
+                int readIndex = tuple.Item1;
+                int dbase = tuple.Item5;
+                uint minSAIndex = (uint) (_c[dbase] + _occurrences[dbase][tuple.Item3 - 1] + 1);
+                uint maxSAIndex = (uint)(_c[dbase] + _occurrences[dbase][tuple.Item4]);
+                if (minSAIndex > maxSAIndex)
                     continue;
-                uint minSAIndex = tuple.Item3;
-                uint maxSAIndex = tuple.Item4;
+
                 if (readIndex < 0)
                 {
-                    if (remainingAllowedDiff >= curAllowedDiff)
+                    if (remainingAllowedDiff > curAllowedDiff)
                     {
-                        if (remainingAllowedDiff > curAllowedDiff)
-                        {
-                            alignments.Clear();
-                            curAllowedDiff = remainingAllowedDiff;
-                        }
-                        alignments.Add(new System.Tuple<uint, uint>(minSAIndex, maxSAIndex));
+                        alignments.Clear();
+                        curAllowedDiff = remainingAllowedDiff;
                     }
+                    alignments.Add(new System.Tuple<uint, uint>(minSAIndex, maxSAIndex));
                     continue;
                 }
 
@@ -412,21 +412,15 @@ namespace CS124Project.Bwt
                 {
                     if (dnaBase == shortRead[readIndex])
                     {
-                        var newMinSAIndex = (uint) (_c[dnaBase] + _occurrences[dnaBase][minSAIndex - 1] + 1);
-                        var newMaxSAIndex = (uint) (_c[dnaBase] + _occurrences[dnaBase][maxSAIndex]);
-                        if (newMaxSAIndex >= newMinSAIndex)
-                            maxHeap.Add(new Tuple<int, int, uint, uint>(readIndex - 1, remainingAllowedDiff,
-                                                                        newMinSAIndex, newMaxSAIndex));
+                        maxHeap.Add(new Tuple<int, int, uint, uint, int>(readIndex - 1, remainingAllowedDiff,
+                                                                        minSAIndex, maxSAIndex, dnaBase));
                     }
                     else
                     {
                         if (remainingAllowedDiff - 1 >= minDiffs[readIndex])
                         {
-                            var newMinSAIndex = (uint) (_c[dnaBase] + _occurrences[dnaBase][minSAIndex - 1] + 1);
-                            var newMaxSAIndex = (uint) (_c[dnaBase] + _occurrences[dnaBase][maxSAIndex]);
-                            if (newMaxSAIndex >= newMinSAIndex)
-                                maxHeap.Add(new Tuple<int, int, uint, uint>(readIndex - 1, remainingAllowedDiff - 1,
-                                                                            newMinSAIndex, newMaxSAIndex));
+                            maxHeap.Add(new Tuple<int, int, uint, uint, int>(readIndex - 1, remainingAllowedDiff - 1,
+                                                                            minSAIndex, maxSAIndex, dnaBase));
                         }
                     }
                 }

@@ -43,11 +43,11 @@ namespace CS124Project.Bwt
             _array[itemIndex] = item;
 
             Count++;
-            if (Count > Volatile.Read(ref maxCount))
+            /*if (Count > Volatile.Read(ref maxCount))
             {
                 Interlocked.Exchange(ref maxCount, Count);
                 Console.WriteLine("max heap {0}", maxCount);
-            }
+            }*/
         }
 
         public T Remove()

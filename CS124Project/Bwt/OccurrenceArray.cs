@@ -53,6 +53,8 @@ namespace CS124Project.Bwt
             {
                 //if (index >= _length || index < 0)
                 //    throw new IndexOutOfRangeException();
+                if (index == uint.MaxValue)
+                    return 0;
 
                 var compressedIndex = index / CompressFactor;
                 var occurrences = _compressedOcc[compressedIndex];
