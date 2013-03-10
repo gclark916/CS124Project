@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 /* Adapted from http://content.gpwiki.org/index.php/C_sharp:BinaryHeapOfT */
@@ -9,6 +10,7 @@ namespace CS124Project.Bwt
 {
     class BinaryHeap<T>
     {
+        private static int maxCount = 0;
         private T[] _array;
         private readonly Comparison<T> _comparison;
         public int Count { get; private set; }
@@ -41,6 +43,11 @@ namespace CS124Project.Bwt
             _array[itemIndex] = item;
 
             Count++;
+            if (Count > Volatile.Read(ref maxCount))
+            {
+                Interlocked.Exchange(ref maxCount, Count);
+                Console.WriteLine("max heap {0}", maxCount);
+            }
         }
 
         public T Remove()
