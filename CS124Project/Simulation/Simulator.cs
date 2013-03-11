@@ -119,7 +119,7 @@ namespace CS124Project.Simulation
             }
         }
 
-        public static void GenerateShortReadsFromDonorGenome(string donorGenomeFile, string readsFile, double coverage)
+        public static void GenerateShortReadsFromDonorGenome(string donorGenomeFile, string readsFile, double coverage, long limit)
         {
             Poisson poisson = new Poisson(coverage / ReadLength) { RandomSource = new MersenneTwister() };
 
@@ -128,9 +128,10 @@ namespace CS124Project.Simulation
             {
                 var writer = new BinaryWriter(file);
                 var reader = new BinaryReader(donorFile);
-                for (long donorIndex = 0; donorIndex <= donorFile.Length - ReadLength; donorIndex++)
+                for (long donorIndex = 0, numReads = 0; donorIndex <= donorFile.Length - ReadLength && numReads < limit; donorIndex++)
                 {
                     var numReadsAtPos = poisson.Sample();
+                    numReads += numReadsAtPos;
 
                     if (numReadsAtPos > 0)
                     {

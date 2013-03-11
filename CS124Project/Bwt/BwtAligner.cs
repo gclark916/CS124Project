@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -83,7 +84,7 @@ namespace CS124Project.Bwt
             CompressedSuffixArray csaRev = CompressedSuffixArray.CreateFromFile(baseFileName + "_rev.csa", bwtRev,
                                                                                 occRev, c);
 
-            BwtAligner aligner = new BwtAligner(c, occ, occRev, csa, csaRev, readLength);
+            BwtAligner aligner = new BwtAligner(c, occ, occRev, csa, csaRev, readLength, 20);
             return aligner;
         }
 
@@ -99,42 +100,68 @@ namespace CS124Project.Bwt
                 var numReads = file.Length/DnaSequence.ByteArrayLength(_readLength);
                 Random[] randoms = new Random[_threadCount];
                 var manualResetEvents = new ManualResetEvent[_threadCount];
+
+                bool[] doneReading = {false};
+                Queue<byte[]> queue = new Queue<byte[]>();
+                long[] readsAligned = {0};
+                ManualResetEvent queueReadyForMore = new ManualResetEvent(true);
+
                 for (int i = 0; i < manualResetEvents.Length; i++)
                 {
                     randoms[i] = new Random();
-                    manualResetEvents[i] = new ManualResetEvent(true);
-                }
+                    manualResetEvents[i] = new ManualResetEvent(false);
 
-                long readsAligned = 0;
-                while (readsAligned < numReads)
-                {
-                    if (readsAligned%20000 == 0)
-                    {
-                        Console.WriteLine(readsAligned);
-                        GC.Collect();
-                    }
-                    byte[] shortReadBytes = reader.ReadBytes(DnaSequence.ByteArrayLength(_readLength));
-                    DnaSequence shortRead = new DnaSequence(shortReadBytes, _readLength);
-                    int threadIndex = WaitHandle.WaitAny(manualResetEvents);
-                    manualResetEvents[threadIndex].Reset();
-                    var parameters =
-                        new Tuple<DnaSequence, int, Random, IStatelessSession, ManualResetEvent, long>(shortRead, 2,
-                                                                                                       randoms[threadIndex],
-                                                                                                       session,
-                                                                                                       manualResetEvents
-                                                                                                           [threadIndex],
-                                                                                                       readsAligned);
+                    var i1 = i;
                     ThreadPool.QueueUserWorkItem(o =>
                         {
-                            var p = o as Tuple<DnaSequence, int, Random, IStatelessSession, ManualResetEvent, long>;
-                            Debug.Assert(p != null, "p != null");
-                            AddAlignmentsToDatabase(p.Item1, p.Item2, p.Item3, p.Item4, p.Item6);
-                            p.Item5.Set();
-                        }, parameters);
+                            while (Volatile.Read(ref readsAligned[0]) != numReads)
+                            {
+                                byte[] shortReadBytes;
+                                long readId;
+                                lock (queue)
+                                {
+                                    if (!queue.Any())
+                                        continue;
+                                    shortReadBytes = queue.Dequeue();
+                                    if (queue.Count < 20000)
+                                        queueReadyForMore.Set();
+                                    readId = Volatile.Read(ref readsAligned[0]);
+                                    Interlocked.Increment(ref readsAligned[0]);
+                                }
+                                var shortRead = new DnaSequence(shortReadBytes, _readLength);
+                                AddAlignmentsToDatabase(shortRead, 2, randoms[i1], session, readId);
+                                if (readId%20000 == 0)
+                                {
+                                    Console.WriteLine(readId);
+                                    GC.Collect();
+                                }
+                            }
 
-                    readsAligned++;
+                            manualResetEvents[i1].Set();
+                        });
+
+                    readsAligned[0]++;
                 }
 
+                long readsRead = 0;
+                while (readsRead < numReads)
+                {
+                    byte[] shortReadBytes = reader.ReadBytes(DnaSequence.ByteArrayLength(_readLength));
+                    queueReadyForMore.WaitOne();
+
+                    lock (queue)
+                    {
+                        queue.Enqueue(shortReadBytes);
+                        if (queue.Count > 40000)
+                            queueReadyForMore.Reset();
+                    }
+                    readsRead++;
+                }
+
+                lock (doneReading)
+                {
+                    doneReading[0] = true;
+                }
                 WaitHandle.WaitAll(manualResetEvents);
                 transaction.Commit();
             }
