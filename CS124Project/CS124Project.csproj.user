@@ -10,4 +10,7 @@
     <FallbackCulture>en-US</FallbackCulture>
     <VerifyUploadedFiles>false</VerifyUploadedFiles>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <StartArguments>-a -basefile=combined -coverage=5 -readlimit=1000000</StartArguments>
+  </PropertyGroup>
 </Project>

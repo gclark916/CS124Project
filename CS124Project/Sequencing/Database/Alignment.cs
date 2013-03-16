@@ -1,4 +1,4 @@
-﻿namespace CS124Project.Bwt.Database
+﻿namespace CS124Project.Sequencing.Database
 {
     public class Alignment
     {

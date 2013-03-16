@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 /* Adapted from http://content.gpwiki.org/index.php/C_sharp:BinaryHeapOfT */
-namespace CS124Project.Bwt
+namespace CS124Project.Sequencing
 {
     class BinaryHeap<T>
     {

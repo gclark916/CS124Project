@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 
-namespace CS124Project.Bwt
+namespace CS124Project.Sequencing
 {
     class OccurrenceArray
     {

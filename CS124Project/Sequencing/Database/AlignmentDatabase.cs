@@ -5,7 +5,7 @@ using NHibernate;
 using NHibernate.Cfg;
 using NHibernate.Tool.hbm2ddl;
 
-namespace CS124Project.Bwt.Database
+namespace CS124Project.Sequencing.Database
 {
     class AlignmentDatabase
     {

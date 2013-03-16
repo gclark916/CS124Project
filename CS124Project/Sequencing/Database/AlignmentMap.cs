@@ -1,6 +1,6 @@
 ﻿using FluentNHibernate.Mapping;
 
-namespace CS124Project.Bwt.Database
+namespace CS124Project.Sequencing.Database
 {
     class AlignmentMap : ClassMap<Alignment>
     {

@@ -2,7 +2,7 @@
 using System.IO;
 using CS124Project.Sais;
 
-namespace CS124Project.Bwt
+namespace CS124Project.Sequencing
 {
     internal class DnaBwt
     {

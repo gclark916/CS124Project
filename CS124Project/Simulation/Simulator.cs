@@ -9,7 +9,6 @@ namespace CS124Project.Simulation
     class Simulator
     {
         private const double SnpDensity = 1.0/1000.0;
-        public static int ReadLength = 30;
 
         public static void GenerateReferenceGenomeTextFile(string infile, string outfile)
         {
@@ -98,37 +97,19 @@ namespace CS124Project.Simulation
             }
         }
 
-        public static void GenerateShortReadsTextFromDonorGenome(string donorGenomeFile, string readsFile, double coverage)
+        public static void GenerateShortReadsFromDonorGenome(string donorGenomeFile, string readsFile, int readLength, double coverage, long limit)
         {
-            Poisson poisson = new Poisson(coverage/ReadLength) {RandomSource = new MersenneTwister()};
-
-            string genome = File.ReadAllText(donorGenomeFile);
-            using (var writer = new StreamWriter(File.Open(readsFile, FileMode.Create)))
-            {
-                for (int donorIndex = 0; donorIndex <= genome.Length-ReadLength; donorIndex++)
-                {
-                    var numReadsAtPos = poisson.Sample();
-
-                    if (numReadsAtPos > 0)
-                    {
-                        string read = genome.Substring(donorIndex, ReadLength) + '\n';
-                        for (int i = 0; i < numReadsAtPos; i++)
-                            writer.Write(read);
-                    }
-                }
-            }
-        }
-
-        public static void GenerateShortReadsFromDonorGenome(string donorGenomeFile, string readsFile, double coverage, long limit)
-        {
-            Poisson poisson = new Poisson(coverage / ReadLength) { RandomSource = new MersenneTwister() };
+            Poisson poisson = new Poisson(coverage / readLength) { RandomSource = new MersenneTwister() };
 
             using (var donorFile = File.OpenRead(donorGenomeFile))
             using (var file = File.Open(readsFile, FileMode.Create))
             {
                 var writer = new BinaryWriter(file);
                 var reader = new BinaryReader(donorFile);
-                for (long donorIndex = 0, numReads = 0; donorIndex <= donorFile.Length - ReadLength && numReads < limit; donorIndex++)
+
+                writer.Write(readLength);
+
+                for (long donorIndex = 0, numReads = 0; donorIndex <= donorFile.Length - readLength && numReads < limit; donorIndex++)
                 {
                     var numReadsAtPos = poisson.Sample();
                     numReads += numReadsAtPos;
@@ -136,7 +117,7 @@ namespace CS124Project.Simulation
                     if (numReadsAtPos > 0)
                     {
                         donorFile.Seek(donorIndex, SeekOrigin.Begin);
-                        var chars = reader.ReadChars(ReadLength);
+                        var chars = reader.ReadChars(readLength);
                         string read = new string(chars);
                         DnaSequence dna = DnaSequence.CreateGenomeFromString(read);
                         for (int i = 0; i < numReadsAtPos; i++)

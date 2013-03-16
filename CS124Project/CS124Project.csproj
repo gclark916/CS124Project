@@ -5,7 +5,7 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{2A5B0A11-23CB-408D-82DE-2C806DBE0EA6}</ProjectGuid>
-    <OutputType>WinExe</OutputType>
+    <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>CS124Project</RootNamespace>
     <AssemblyName>CS124Project</AssemblyName>
@@ -13,6 +13,7 @@
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
@@ -25,7 +26,6 @@
     <MapFileExtensions>true</MapFileExtensions>
     <ApplicationRevision>0</ApplicationRevision>
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
-    <IsWebBootstrapper>false</IsWebBootstrapper>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
@@ -84,6 +84,9 @@
     <Reference Include="MathNet.Numerics.IO">
       <HintPath>..\packages\MathNet.Numerics.2.4.0\lib\net40\MathNet.Numerics.IO.dll</HintPath>
     </Reference>
+    <Reference Include="NDesk.Options">
+      <HintPath>..\packages\NDesk.Options.0.2.1\lib\NDesk.Options.dll</HintPath>
+    </Reference>
     <Reference Include="NHibernate">
       <HintPath>..\packages\NHibernate.3.3.2.4000\lib\Net35\NHibernate.dll</HintPath>
     </Reference>
@@ -105,14 +108,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Bwt\BinaryHeap.cs" />
-    <Compile Include="Bwt\BwtAligner.cs" />
-    <Compile Include="Bwt\CompressedSuffixArray.cs" />
-    <Compile Include="Bwt\Database\Alignment.cs" />
-    <Compile Include="Bwt\Database\AlignmentDatabase.cs" />
-    <Compile Include="Bwt\Database\AlignmentMap.cs" />
-    <Compile Include="Bwt\DnaBwt.cs" />
-    <Compile Include="Bwt\OccurrenceArray.cs" />
+    <Compile Include="Sequencing\BinaryHeap.cs" />
+    <Compile Include="Sequencing\Sequencer.cs" />
+    <Compile Include="Sequencing\CompressedSuffixArray.cs" />
+    <Compile Include="Sequencing\Database\Alignment.cs" />
+    <Compile Include="Sequencing\Database\AlignmentDatabase.cs" />
+    <Compile Include="Sequencing\Database\AlignmentMap.cs" />
+    <Compile Include="Sequencing\Database\Metadata.cs" />
+    <Compile Include="Sequencing\Database\MetadataMap.cs" />
+    <Compile Include="Sequencing\DnaBwt.cs" />
+    <Compile Include="Sequencing\OccurrenceArray.cs" />
     <Compile Include="Dna\DnaBase.cs" />
     <Compile Include="Dna\DnaSequence.cs" />
     <Compile Include="Program.cs" />
