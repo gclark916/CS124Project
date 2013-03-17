@@ -31,23 +31,23 @@ readlength | set the short read length when generating short reads | 30
 Examples
 --------
 
-Generate everything from raw reference genome "hg19.dna." Set the base file name to "hg19". Use coverage of 5. Align reads, construct genome, compute accuracy:
-
+Generate everything from raw reference genome "hg19.dna." Set the base file name to "hg19". Use coverage of 5. Align reads, construct genome, compute accuracy:  
 -RDsfracA -rawref=hg19.dna -basefile=hg19 -coverage=5
 
-Generate 1,000,000 reads from donor genome, using base file name "hg19". hg19_donor.dna must exist:
-
+Generate 1,000,000 reads from donor genome, using base file name "hg19". hg19_donor.dna must exist:  
 -s -basefile=hg19 -coverage=10 -limit=1000000
 
 Files
 -----
-rawref: Text DNA file  
-[basefile].dna: Usuable reference genome. Compared to rawref, acgt are capitalized, all 'N' are replaced with one of ACGT at random, all other characters are removed  
-[basefile].dna.bin: Binary representation of reference genome  
-[basefile].c: Cumulative count precomputed data structure  
-[basefile].occ: Compressed occurrence arrays  
-[basefile].csa: Compressed suffix array  
-[basefile]_output.dna: constructed text genome. May have 'N' if there were no reads covering that position  
-[basefile].db: alignment database  
+file | description
+--- | ---
+rawref | Text DNA file  
+[basefile].dna: | Usuable reference genome. Compared to rawref, acgt are capitalized, all 'N' are replaced with one of ACGT at random, all other characters are removed  
+[basefile].dna.bin: | Binary representation of reference genome  
+[basefile].c: | Cumulative count precomputed data structure  
+[basefile].occ | Compressed occurrence arrays  
+[basefile].csa | Compressed suffix array  
+[basefile]_output.dna | constructed text genome. May have 'N' if there were no reads covering that position  
+[basefile].db | alignment database  
 
-*_rev.*: reverse versions. Used in the MinDiff array calculation
+\*_rev.\*: reverse versions. Used in the MinDiff array calculation
