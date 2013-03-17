@@ -14,7 +14,7 @@ namespace CS124Project
         static int Main(string[] args)
         {
             string baseFile = "default",
-                rawReferenceFile = "defaultraw";
+                rawReferenceFile = "defaultraw.dna";
             double coverage = 1;
             long readLimit = long.MaxValue;
             int readLength = 30;
@@ -146,6 +146,7 @@ namespace CS124Project
             if (computeAccuracy)
             {
                 GC.Collect();
+                Console.WriteLine("Calculating accuracy");
                 var accuracy = Simulator.ComputeAccuracy(donorFile, outputFile);
                 Console.WriteLine("Accuracy of {0} compared to {1}: {2}", outputFile, donorFile, accuracy);
             }
