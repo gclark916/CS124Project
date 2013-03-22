@@ -31,8 +31,8 @@ readlength | set the short read length when generating short reads | 30
 Examples
 --------
 
-Generate everything from raw reference genome "hg19.dna." Set the base file name to "hg19". Use coverage of 5. Align reads, construct genome, compute accuracy:  
--RDsfracA -rawref=hg19.dna -basefile=hg19 -coverage=5
+Generate everything from raw reference genome "hg19raw.dna." Set the base file name to "hg19". Use coverage of 5. Align reads, construct genome, compute accuracy:  
+-RDsfracA -rawref=hg19raw.dna -basefile=hg19 -coverage=5
 
 Generate 1,000,000 reads from donor genome, using base file name "hg19". hg19_donor.dna must exist:  
 -s -basefile=hg19 -coverage=10 -limit=1000000

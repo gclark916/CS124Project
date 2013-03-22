@@ -1,4 +1,8 @@
-﻿using System;
+﻿/* Code is adapted from 
+ * Nong, Ge, Sen Zhang, and Wai Hong Chan. "Two Efficient Algorithms for 
+ * Linear Time Suffix Array Construction." IEEE Transactions on Computers 
+ * 60.10 (2011): 1471-484. */
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
